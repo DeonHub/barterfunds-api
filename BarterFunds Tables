@@ -1,0 +1,216 @@
+User
+  firstname
+  surname
+  email address
+  password
+  contact
+  address
+  city
+  state
+  country
+  zip
+  kyc verified
+  email verified
+  phone verified
+  date added
+  
+
+
+    User ID
+    Username
+    Email Address
+    Password
+    Full Name
+    Date of Birth
+    Gender
+    Profile Picture
+    Phone Number
+    Address
+    Country
+    Timezone
+    Language Preference
+    Account Status
+    Account Type/Roles
+    Registration Date
+    Last Login Date
+    Verification Status
+    Security Questions/Answers
+    Social Media Links
+    Custom Fields
+    
+      
+      
+  
+Currencies
+  name
+  image
+  shortcode
+  buy rate
+  sell rate
+  available for buy
+  available for sell
+  status
+  minimum buy amount
+  maximum buy amount
+  minimum sell amount
+  maximum sell amount
+  date created
+
+    Currency Code
+    Currency Name
+    Symbol
+    Decimal Places
+    Exchange Rate
+    Country
+    Status
+    Created At
+    Updated At
+    Default
+
+
+KYC
+    User ID
+    Full Name
+    Date of Birth
+    Nationality
+    Residential Address
+    Identity Document Type
+    Identity Document Number
+    Issue Date
+    Expiry Date
+    Issuing Authority
+    Additional Identification Documents
+    Photograph
+    Signature
+    KYC Status
+    KYC Reviewer
+    Timestamp
+
+
+Payment gateways
+  login id
+  transaction key
+  public key
+  private key
+  
+  
+Withdrawals
+    Withdrawal ID
+    User ID
+    Amount
+    Currency
+    Status
+    Payment Method
+    Account Details
+    Withdrawal Fee
+    Processing Time
+    Notes/Comments
+    Admin/User Remarks
+    Transaction Reference
+    Payment Gateway Response
+
+Exchanges
+  S.N. 	
+  Exchange ID 	
+  User 	
+  Received Method 	
+  Received Amount 	
+  Send Method 	
+  Send Amount 	
+  Status 	
+  Date created
+  
+  
+Tickets
+    Ticket ID
+    Description
+    Priority
+    Status.
+    Assigned To
+    Created By
+    Created At
+    Last Updated
+    Due Date
+    Category/Type
+    Tags/Labels
+    Comments/Notes
+    Resolution
+  
+  
+Activity Log 
+    Log ID
+    User ID
+    Username
+    Activity Type
+    Timestamp
+    IP Address
+    User Agent
+    Session ID
+    Object Type
+    Object ID
+    Action Details
+    Outcome
+    Source
+    Location
+    User Role
+
+Referral commission
+    Referral ID
+    Referrer ID
+    Referral Code/Link
+    Referred User ID
+    Referral Date
+    Commission Amount
+    Commission Status
+    Commission Payment Date
+    Payment Method
+    Referral Source
+    Referral Program ID
+    Campaign Details
+    Referral Level
+    Referral Program Type
+    Referral Program Terms
+
+
+Notifications
+    Notification ID
+    User ID
+    Notification Type
+    Subject/Title
+    Message
+    Timestamp
+    Status
+    Action URL
+    Read/Unread Flag
+    Recipient Type
+    Sender ID
+    Priority Level
+    Delivery Method
+    Metadata
+    Expiration Date
+    Custom Fields
+
+
+
+Login history
+
+Wallet
+    User ID
+    Wallet ID
+    Currency Type
+    Balance
+    Transaction History
+    Creation Date
+    Last Updated
+    Security Measures
+    Status
+    Associated Account
+    Wallet Type
+    Limits
+    Metadata
+    Verification Status
+    Linked Bank Account/ Payment Method
+    Currency Conversion Preferences
+    
+    
+add proof of address to kyc
