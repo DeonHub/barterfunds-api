@@ -12,13 +12,13 @@ const generateTicketId = (length) => {
 };
 
 const getSupportTickets = (req, res, next) => {
-    const filters = []; 
+    const filters = [];
     filters.push({ status: { $ne: 'deleted' } });
-    // filters.push({ isAdmin: false });
-  
+
     const filter = { $and: filters };
 
     SupportTicket.find(filter)
+        // .sort({ createdAt: -1 })
         .exec()
         .then(tickets => {
             res.status(200).json({
@@ -38,33 +38,46 @@ const getSupportTickets = (req, res, next) => {
 
 
 
+
 const createSupportTicket = (req, res, next) => {
     const userId = req.user.userId;
-    const files = req.files;
-    const descriptions = req.body.descriptions;
+    const files = req.files ? req.files : [];
+    let descriptions = req.body.descriptions ? req.body.descriptions : [];
 
-    // Ensure that the number of files matches the number of descriptions
-    if (files.length !== descriptions.length) {
-        return res.status(400).json({
-            success: false,
-            message: "Number of files does not match the number of descriptions"
-        });
+    // Ensure descriptions is always an array
+    if (!Array.isArray(descriptions)) {
+        descriptions = [descriptions];
     }
 
-    // Extract file metadata and descriptions and store them in an array
-    const fileMetadata = files.map((file, index) => ({
-        originalName: file.originalname,
-        path: file.path,
-        description: descriptions[index] // Match each file with its corresponding description
-    }));
+    if (files.length !== 0) {
+        // Ensure that the number of files matches the number of descriptions
+        if (files.length !== descriptions.length) {
+            return res.status(400).json({
+                success: false,
+                message: "Number of files does not match the number of descriptions"
+            });
+        }
 
+        // Extract file metadata and descriptions and store them in an array
+        const fileMetadata = files.map((file, index) => ({
+            originalName: file.originalname,
+            path: file.path,
+            description: descriptions[index] // Match each file with its corresponding description
+        }));
+
+        // Use the fileMetadata in the ticket creation logic
+        console.log(fileMetadata);
+    }
+
+    // Example ticket creation (commented out)
     const ticket = new SupportTicket({
         _id: new mongoose.Types.ObjectId(),
         ticketId: generateTicketId(8),
         userId: userId,
         subject: req.body.subject,
         message: req.body.message,
-        files: fileMetadata // Add file metadata to the files array
+        category: req.body.category,
+        files: files.length > 0 ? fileMetadata : [],
     });
 
     ticket
@@ -81,10 +94,12 @@ const createSupportTicket = (req, res, next) => {
             console.log(err);
             res.status(500).json({
                 success: false,
-                error: err
+                error: err,
+                message: "Error creating ticket. Please try again."
             });
         });
 };
+
 
 
 const getSupportTicketById = (req, res, next) => {
@@ -108,42 +123,56 @@ const getSupportTicketById = (req, res, next) => {
 
 const updateSupportTicket = (req, res, next) => {
     const id = req.params.ticketId;
-    const { status, comments } = req.body;
+    const status = req.body.status || null;
     const updateOps = {};
+
+    console.log(`Received update request for ticket ID: ${id}`);
 
     // Validate if the status is one of the allowed values
     if (status && (status === "open" || status === "closed" || status === "pending" || status === "resolved")) {
         updateOps.status = status;
     }
 
-    // Update comments if provided
-    if (comments) {
-        updateOps.comments = comments;
+    // Add all other fields from the request body to updateOps, excluding 'status'
+    for (const propName in req.body) {
+        if (Object.prototype.hasOwnProperty.call(req.body, propName)) {
+            if (propName !== "status") {
+                updateOps[propName] = req.body[propName];
+            }
+        }
     }
+
+    // Update the updatedAt field to the current date and time
+    updateOps.updatedAt = new Date();
+
 
     // If no valid update operations are provided, return an error
     if (Object.keys(updateOps).length === 0) {
         return res.status(400).json({ success: false, message: "No valid update operations provided." });
     }
 
-    // Update the updatedAt field to the current date and time
-    updateOps.updatedAt = new Date();
-
     // Update the support ticket
     SupportTicket.updateOne({ _id: id }, { $set: updateOps })
         .exec()
         .then(result => {
-            SupportTicket.findById(id).exec().then(ticket => {
-                res.status(200).json({
-                    success: true,
-                    message: "Support ticket updated successfully",
-                    ticket: ticket,
-                    request: {
-                        type: "GET",
-                        url: `${baseUrl}/tickets/${id}`
-                    }
-                });
-            })
+            if (result.nModified === 0) {
+                return res.status(404).json({ success: false, message: "Ticket not found or no changes made." });
+            }
+            return SupportTicket.findById(id).exec();
+        })
+        .then(ticket => {
+            if (!ticket) {
+                return res.status(404).json({ success: false, message: "Ticket not found." });
+            }
+            res.status(200).json({
+                success: true,
+                message: "Support ticket updated successfully",
+                ticket: ticket,
+                request: {
+                    type: "GET",
+                    url: `${baseUrl}/tickets/${id}`
+                }
+            });
         })
         .catch(err => {
             console.error(err);
@@ -153,6 +182,7 @@ const updateSupportTicket = (req, res, next) => {
             });
         });
 };
+
 
 const deleteSupportTicket = (req, res, next) => {
     const id = req.params.ticketId;
@@ -174,7 +204,8 @@ const deleteSupportTicket = (req, res, next) => {
 };
 
 const getSupportTicketsByUserId = (req, res, next) => {
-    const userId = req.params.userId;
+    const userId = req.user.userId;
+    
 
     // SupportTicket.find({ userId: userId, status: { $ne: 'deleted' } })
     SupportTicket.find({ userId: userId, status: { $ne: 'deleted' }})

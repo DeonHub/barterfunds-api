@@ -19,7 +19,7 @@ const {
 
 router.get("/", checkAuth, getSupportTickets);
 router.post("/", checkAuth, upload.array('files', 5), createSupportTicket);
-router.get("/user/:userId", checkAuth, getSupportTicketsByUserId);
+router.get("/x/user", checkAuth, getSupportTicketsByUserId);
 router.get("/:ticketId", checkAuth, getSupportTicketById);
 router.patch("/:ticketId", checkAuth, updateSupportTicket);
 router.delete("/:ticketId", checkAuth, deleteSupportTicket);

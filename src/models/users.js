@@ -28,7 +28,8 @@ const userSchema = mongoose.Schema({
     activationTokenExpires: { type: Date },
     resetToken: { type: String, default: "" },
     resetTokenExpires: { type: Date },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    lastLogin: { type: Date, default: Date.now }
 
 });
 

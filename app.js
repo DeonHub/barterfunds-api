@@ -9,7 +9,7 @@ require('dotenv').config();
 const dashboardRoutes = require("./src/routes/dashboard.routes");
 const kycRoutes = require("./src/routes/kyc.routes");
 const currencyRoutes = require("./src/routes/currency.routes");
-const orderRoutes = require("./src/routes/orders");
+const orderRoutes = require("./src/routes/orders.routes");
 const userRoutes = require('./src/routes/users.routes');
 const authRoutes = require('./src/routes/auth.routes');
 const walletRoutes = require('./src/routes/wallet.routes');
@@ -70,7 +70,7 @@ app.use("/transactions", transactionRoutes);
 
 app.use((req, res, next) => {
   if (req.url === '/') {
-    res.status(200).send('Welcome to BarterFunds API');
+    res.status(200).send('Welcome to BarterFunds API 1.0.0');
   } else {
     const error = new Error('Not found');
     error.status = 404;

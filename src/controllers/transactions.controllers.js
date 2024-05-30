@@ -6,6 +6,7 @@ const getTransactions = (req, res, next) => {
   const filters = []; // Initialize an array to store all filters
   filters.push({ status: { $ne: 'deleted' } });
   // filters.push({ isAdmin: false });
+  
 
   // Combine all filters into a single filter object using $and
   const filter = { $and: filters };
@@ -48,6 +49,7 @@ const createTransaction = (req, res, next) => {
     paymentMethod: req.body.paymentMethod || "",
     receipientMethod: req.body.receipientMethod || "momo",
     receipientNumber: req.body.receipientNumber || "",
+    paymentNumber: req.body.paymentNumber || "",
     status: req.body.status || "active",
     action: req.body.action || "",
     transactionForm: req.body.transactionForm || ""
@@ -77,6 +79,8 @@ const createTransaction = (req, res, next) => {
 const getTransactionById = (req, res, next) => {
   const id = req.params.transactionId;
   Transactions.findById(id)
+    .populate('userId')
+    .populate('currencyId')
     .exec()
     .then((doc) => {
       if (doc) {
@@ -124,9 +128,33 @@ const getTransactionsByUserId = (req, res, next) => {
 };
 
 
+const getTransactionsByUser = (req, res, next) => {
+  const userId = req.params.userId;
+  console.log(userId);
+  console.log('Hello');
+
+  // SupportTicket.find({ userId: userId, status: { $ne: 'deleted' } })
+  Transactions.find({ userId: userId, status: { $ne: 'deleted' }})
+      .exec()
+      .then(transactions => {
+          res.status(200).json({
+              success: true,
+              count: transactions.length,
+              transactions: transactions
+          });
+      })
+      .catch(err => {
+          console.error(err);
+          res.status(500).json({
+              success: false,
+              error: err
+          });
+      });
+};
+
 const updateTransactionByReference = (req, res, next) => {
   const referenceId = req.params.referenceId;
-  const { status } = req.body;
+  const status = req.body.status || null;
   const updateOps = {};
 
   // Check if there is a file attached to update the transaction proof
@@ -149,6 +177,9 @@ const updateTransactionByReference = (req, res, next) => {
   if (status) {
     updateOps.status = status;
   }
+
+      // Update the updatedAt field to the current date and time
+      updateOps.updatedAt = new Date();
 
   // Find and update the transaction by reference
   Transactions.findOneAndUpdate(
@@ -220,7 +251,7 @@ const updateTransaction = (req, res, next) => {
   Transactions.updateOne({ _id: id }, { $set: updateOps })
     .exec()
     .then((result) => {
-      let message = "Transaction updated";
+      let message = "Transaction updated successfully";
       
       Transactions.findById(id)
         .exec()
@@ -283,5 +314,6 @@ module.exports = {
   getTransactionsByUserId,
   updateTransaction,
   deleteTransaction,
-  updateTransactionByReference
+  updateTransactionByReference,
+  getTransactionsByUser
 };

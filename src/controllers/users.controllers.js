@@ -3,6 +3,11 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const Users = require("../models/users");
+const Transactions = require("../models/transactions");
+const Orders = require("../models/orders");
+const Wallet = require("../models/wallet");
+const SupportTicket = require("../models/supportTicket");
+
 
 const getUsers = (req, res, next) => {
   const filters = []; // Initialize an array to store all filters
@@ -39,14 +44,10 @@ const getUser = async (req, res, next) => {
   try {
     if (mongoose.Types.ObjectId.isValid(userId)) {
       // If userId is a valid ObjectId
-      user = await Users.findById(userId)
-        // .select("_id firstname surname username email contact status verified createdAt")
-        .exec();
+      user = await Users.findById(userId).exec();
     } else {
       // If userId is not a valid ObjectId
-      user = await Users.findOne({ username: userId })
-        // .select("_id firstname surname username email contact status verified createdAt")
-        .exec();
+      user = await Users.findOne({ username: userId }).exec();
     }
 
     if (!user) {
@@ -56,16 +57,28 @@ const getUser = async (req, res, next) => {
       });
     }
 
+    // Fetch total transactions, support tickets, orders, and wallet associated with the userId
+    const [transactions, supportTickets, orders, wallet] = await Promise.all([
+      Transactions.countDocuments({ userId }).exec(),
+      SupportTicket.countDocuments({ userId }).exec(),
+      Orders.countDocuments({ userId }).exec(),
+      Wallet.findOne({ userId }).exec()
+    ]);
+
     res.status(200).json({
       success: true,
       user: user,
+      totalTransactions: transactions,
+      totalSupportTickets: supportTickets,
+      totalOrders: orders,
+      wallet: wallet,
       request: {
         type: "GET",
         url: `${process.env.BASE_URL}/users`
       }
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 };

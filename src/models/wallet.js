@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require("./users");
+const Order = require("./orders");
 
 const walletSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
@@ -7,17 +8,8 @@ const walletSchema = mongoose.Schema({
     walletName: { type: String, required: true, default: 'My Wallet'},
     walletAddress: { type: String, required: true },
     currencyType: { type: String, required: true, default: 'All' },
-    balance: { type: Number, default: 0 },
-
-    transactionHistory: [{
-        transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
-        timestamp: { type: Date, default: Date.now },
-        amount: { type: Number, required: true },
-        sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        transactionType: { type: String, enum: ['deposit', 'withdrawal', 'transfer'], required: true }
-    }],
-
+    balanceGhs: { type: Number, default: 0 },
+    balanceUsd: { type: Number, default: 0 },
 
     status: { type: String, enum: ['active', 'inactive', 'suspended', 'deleted'], default: 'active' },
     walletType: { type: String, enum: ['personal', 'business'], default: 'personal' },
@@ -29,6 +21,12 @@ const walletSchema = mongoose.Schema({
 
     creationDate: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
+}, { toJSON: { virtuals: true }, toObject: { virtuals: true } });
+
+walletSchema.virtual('orderHistory', {
+    ref: 'Order',
+    localField: '_id',
+    foreignField: 'walletId'
 });
 
 walletSchema.pre('save', function(next) {

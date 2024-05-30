@@ -6,6 +6,8 @@ const supportTicketSchema = mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     subject: { type: String, required: true },
     message: { type: String, required: true },
+    reviewer: { type: String },
+    category: { type: String , default: 'Customer Service and General Inquiries'},
     comments: { type: String, default: '' },
     feedback: { type: String, default: '' },
     rating: { type: Number, default: 0 },
@@ -17,7 +19,8 @@ const supportTicketSchema = mongoose.Schema({
     }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
-});
+
+}, { timestamps: true });
 
 
 supportTicketSchema.pre('save', function(next) {

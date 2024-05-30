@@ -30,9 +30,10 @@ const transactionsSchema = mongoose.Schema({
         enum: ['momo', 'credit-card', 'wallet', 'bank', '']
     },
 
+    paymentNumber: { type: String },
     receipientNumber: { type: String },
 
-    status: { type: String, enum: ['active', 'pending', 'success', 'cancelled', 'failed', 'deleted'], default: 'active' },
+    status: { type: String, enum: ['pending', 'success', 'cancelled', 'failed', 'deleted'], default: 'pending' },
 
     action: { type: String },
     paymentProof: { type: String },
