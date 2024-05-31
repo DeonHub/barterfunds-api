@@ -432,6 +432,7 @@ const twoFactorAuth = async (req, res, next) => {
 
     // Find user by ID in the database
     const user = await Users.findById(userId);
+    
 
     // Check if user exists
     if (!user) {
@@ -443,6 +444,8 @@ const twoFactorAuth = async (req, res, next) => {
       // Generate a secret key for two-factor authentication
       const authSecretKey = speakeasy.generateSecret({ length: 20 });
 
+      console.log(authSecretKey)
+
       // Generate a QR code URL for Google Authenticator
       const qrCodeURL = await generateQRCodeURL(
         authSecretKey,
@@ -450,9 +453,9 @@ const twoFactorAuth = async (req, res, next) => {
         label,
         iconURL
       );
-
-      // Update user password with the new hashed password
-      // user.twoFactorAuth = true;
+      
+      // Update the user document with the secret key and QR code URL
+      user.twoFactorAuth = true;
       !user.twoFactorAuthSecretKey
         ? (user.twoFactorAuthSecretKey = authSecretKey.base32)
         : user.twoFactorAuthSecretKey;
@@ -460,10 +463,13 @@ const twoFactorAuth = async (req, res, next) => {
         ? (user.twoFactorAuthQrcode = qrCodeURL)
         : user.twoFactorAuthQrcode;
 
+        
+
       // Save the updated user document
       await user
         .save()
         .then(() => {
+          
           res
             .status(200)
             .json({
@@ -484,10 +490,11 @@ const twoFactorAuth = async (req, res, next) => {
         });
     } else {
       // If two-factor authentication is already enabled, return nothing
+      console.log('user has twofactor')
       return res
         .status(200)
         .json({
-          success: false,
+          success: true,
           message: "Two Factor Auth already enabled",
           user: user,
         });

@@ -28,6 +28,7 @@ const userSchema = mongoose.Schema({
     activationTokenExpires: { type: Date },
     resetToken: { type: String, default: "" },
     resetTokenExpires: { type: Date },
+    addedPaymentMethod: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
     lastLogin: { type: Date }
 
