@@ -104,6 +104,7 @@ const generateReferralCode = () => {
 }
 
 
+
 const Login = async (req, res, next) => {
   try {
     const user = await Users.findOne({ email: req.body.email }).exec();
@@ -135,6 +136,8 @@ const Login = async (req, res, next) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+
 
 const Signup = async (req, res, next) => {
   try {
