@@ -122,6 +122,10 @@ const Login = async (req, res, next) => {
         .json({ success: false, message: "Invalid username or password" });
     }
 
+    // Update lastLogin to current date and time
+    user.lastLogin = new Date();
+    await user.save();
+
     const token = generateToken(user);
     res
       .status(200)
