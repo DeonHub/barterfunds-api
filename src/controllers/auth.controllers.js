@@ -254,8 +254,7 @@ const accountActivation = (req, res, next) => {
             const wallet = new Wallet({
               _id: new mongoose.Types.ObjectId(),
               userId: user._id,
-              walletAddress: generateWalletAddress(64),
-              transactionHistory: [],
+              walletAddress: generateWalletAddress(64)
             });
 
             return wallet.save();
@@ -455,7 +454,7 @@ const twoFactorAuth = async (req, res, next) => {
       );
       
       // Update the user document with the secret key and QR code URL
-      user.twoFactorAuth = true;
+      // user.twoFactorAuth = true;
       !user.twoFactorAuthSecretKey
         ? (user.twoFactorAuthSecretKey = authSecretKey.base32)
         : user.twoFactorAuthSecretKey;
