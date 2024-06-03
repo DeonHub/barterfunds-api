@@ -8,6 +8,13 @@ const addKYC = (req, res, next) => {
 
     const userId = req.user.userId;
 
+    let filePath = req.files['proofOfAddress'][0]['path'];
+    if (!filePath.startsWith('http')) {
+        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+    }
+    proofOfAddress = filePath;
+
+
     const kyc = new KYC({
         _id: new mongoose.Types.ObjectId(),
         userId: userId,
@@ -30,7 +37,7 @@ const addKYC = (req, res, next) => {
         photograph: req.files['photograph'][0]['path'],
         frontImage: req.files['frontImage'][0]['path'],
         backImage: req.files['backImage'][0]['path'],
-        proofOfAddress: req.files['proofOfAddress'][0]['path'],
+        proofOfAddress: proofOfAddress,
         identityDocumentUploaded: req.body.identityDocumentUploaded,
         proofDocumentUploaded: req.body.proofDocumentUploaded,
     });

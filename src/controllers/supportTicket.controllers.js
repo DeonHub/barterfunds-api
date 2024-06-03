@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const SupportTicket = require("../models/supportTicket");
 const baseUrl = process.env.BASE_URL;
+const path = require("path");
 
 const generateTicketId = (length) => {
     const characters = '0123456789';
@@ -49,6 +50,8 @@ const createSupportTicket = (req, res, next) => {
         descriptions = [descriptions];
     }
 
+    let fileMetadata = []; // Define fileMetadata outside the if block
+
     if (files.length !== 0) {
         // Ensure that the number of files matches the number of descriptions
         if (files.length !== descriptions.length) {
@@ -58,15 +61,29 @@ const createSupportTicket = (req, res, next) => {
             });
         }
 
-        // Extract file metadata and descriptions and store them in an array
-        const fileMetadata = files.map((file, index) => ({
-            originalName: file.originalname,
-            path: file.path,
-            description: descriptions[index] // Match each file with its corresponding description
-        }));
+        // // Extract file metadata and descriptions and store them in an array
+        // fileMetadata = files.map((file, index) => ({
+        //     originalName: file.originalname,
+        //     path: file.path,
+        //     description: descriptions[index] // Match each file with its corresponding description
+        // }));
 
-        // Use the fileMetadata in the ticket creation logic
-        console.log(fileMetadata);
+        // Extract file metadata and descriptions and store them in an array
+        fileMetadata = files.map((file, index) => {
+            // Convert absolute path to relative path
+            let filePath = file.path;
+            if (!filePath.startsWith('http')) {
+                filePath = path.relative(path.join(__dirname, '../..'), filePath);
+            }
+
+            return {
+                originalName: file.originalname,
+                path: filePath,
+                description: descriptions[index] // Match each file with its corresponding description
+            };
+        });
+
+
     }
 
     // Example ticket creation (commented out)
@@ -99,6 +116,8 @@ const createSupportTicket = (req, res, next) => {
             });
         });
 };
+
+
 
 
 

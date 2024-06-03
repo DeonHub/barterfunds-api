@@ -159,7 +159,12 @@ const updateTransactionByReference = (req, res, next) => {
 
   // Check if there is a file attached to update the transaction proof
   if (req.file) {
-    updateOps.paymentProof = req.file.path;
+    let filePath = req.file.path;
+    if (!filePath.startsWith('http')) {
+        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+    }
+    updateOps.paymentProof = filePath;
+    console.log(filePath)
   }
 
   // Iterate over the properties of req.body
@@ -227,8 +232,12 @@ const updateTransaction = (req, res, next) => {
 
   // Check if there is a file attached to update the transaction proof
   if (req.file) {
-    updateOps.paymentProof = req.file.path;
-    console.log(req.file.path)
+    let filePath = req.file.path;
+    if (!filePath.startsWith('http')) {
+        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+    }
+    updateOps.paymentProof = filePath;
+    console.log(filePath)
   }
 
   // Iterate over the properties of req.body
