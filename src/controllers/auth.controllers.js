@@ -421,8 +421,8 @@ const updatePassword = async (req, res, next) => {
 };
 
 const twoFactorAuth = async (req, res, next) => {
-  const issuer = "BarterFunds";
-  const label = "BarterFunds Account";
+  const issuer = "BarterFunds Account";
+  const label = req.user.email;
   const iconURL =
     "https://res.cloudinary.com/bloody123/image/upload/v1712932808/cobf5bda56hwpcjtdtur.png";
 
@@ -443,7 +443,6 @@ const twoFactorAuth = async (req, res, next) => {
       // Generate a secret key for two-factor authentication
       const authSecretKey = speakeasy.generateSecret({ length: 20 });
 
-      console.log(authSecretKey)
 
       // Generate a QR code URL for Google Authenticator
       const qrCodeURL = await generateQRCodeURL(
