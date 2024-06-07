@@ -10,7 +10,8 @@ const {
     resetPassword,
     getUserFromToken,
     twoFactorAuth,
-    verifyTwoFactorAuth
+    verifyTwoFactorAuth,
+    getCurrentUser
      } = require('../controllers/auth.controllers');
 const checkAuth = require('../middleware/check-auth');
 
@@ -18,9 +19,10 @@ const checkAuth = require('../middleware/check-auth');
 router.post("/signup", Signup);
 router.post("/login", Login);
 router.post("/account-activation", accountActivation);
-router.get("/get-user-from-token", getUserFromToken);
+router.post("/get-user-from-token", getUserFromToken);
 router.post("/update-password", checkAuth, updatePassword);
 router.get("/two-factor-auth", checkAuth, twoFactorAuth);
+router.get("/get-current-user", checkAuth, getCurrentUser);
 router.get("/verify-otp/:otp", checkAuth, verifyTwoFactorAuth);
 
 
