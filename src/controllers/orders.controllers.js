@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Orders = require("../models/orders");
 const Wallet = require("../models/wallet");
 const baseUrl = process.env.BASE_URL;
+const createNotification = require("../utils/createNotification");
 
 const getOrders = (req, res, next) => {
   const filters = [];
@@ -31,9 +32,7 @@ const getOrders = (req, res, next) => {
     });
 };
 
-const createOrder = (req, res, next) => {
-
-
+const createOrder = async (req, res, next) => {
   const order = new Orders({
     _id: new mongoose.Types.ObjectId(),
     userId: req.user.userId,
@@ -47,25 +46,31 @@ const createOrder = (req, res, next) => {
     receipientNumber: req.body.receipientNumber || ""
   });
 
-  order
-    .save()
-    .then((result) => {
-      console.log(result);
-      res.status(201).json({
-        success: true,
-        message: "Order created successfully",
-        order: result
-      });
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).json({
-        success: false,
-        message: "Error creating order",
-        error: err,
-      });
+  try {
+    const result = await order.save();
+    console.log(result);
+
+    // Create a notification
+    const subject = "Order Created Successfully";
+    const message = `Your order with ID ${result.orderId} has been created successfully.`;
+    const notification = await createNotification(req.user.userId, subject, message);
+
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully",
+      order: result,
+      notification: notification
     });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: "Error creating order",
+      error: err,
+    });
+  }
 };
+
 
 
 
@@ -101,7 +106,6 @@ const getOrderById = (req, res, next) => {
 const getOrdersByUserId = (req, res, next) => {
   const userId = req.user.userId;
 
-  // SupportTicket.find({ userId: userId, status: { $ne: 'deleted' } })
   Orders.find({ userId: userId, status: { $ne: 'deleted' }})
       .exec()
       .then(orders => {
@@ -144,6 +148,7 @@ const getOrdersByUser = (req, res, next) => {
 
 
 const updateOrderByReference = async (req, res, next) => {
+  const userId = req.user.userId;
   const referenceId = req.params.referenceId;
   const status = req.body.status || null;
   const updateOps = {};
@@ -152,10 +157,10 @@ const updateOrderByReference = async (req, res, next) => {
   if (req.file) {
     let filePath = req.file.path;
     if (!filePath.startsWith('http')) {
-        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+      filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
-    console.log(filePath)
+    console.log(filePath);
   }
 
   // Iterate over the properties of req.body
@@ -219,10 +224,16 @@ const updateOrderByReference = async (req, res, next) => {
       { new: true }
     ).populate('userId').exec();
 
+    // Create a notification
+    const subject = "Order Updated Successfully";
+    const message = `Your order with reference ID ${referenceId} has been successfully updated. Please check your wallet for your balance.`;
+    const notification = await createNotification(userId, subject, message);
+
     res.status(200).json({
       success: true,
-      message: 'Order updated',
+      message: 'Order updated successfully',
       order: updatedOrder,
+      notification: notification,
       request: {
         type: 'GET',
         url: `${baseUrl}/orders/${updatedOrder._id}`,
@@ -239,6 +250,7 @@ const updateOrderByReference = async (req, res, next) => {
 
 
 const updateOrder = async (req, res, next) => {
+  const userId = req.user.userId;
   const id = req.params.orderId;
   const status = req.body.status || null;
   const updateOps = {};
@@ -247,10 +259,10 @@ const updateOrder = async (req, res, next) => {
   if (req.file) {
     let filePath = req.file.path;
     if (!filePath.startsWith('http')) {
-        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+      filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
-    console.log(filePath)
+    console.log(filePath);
   }
 
   // Iterate over the properties of req.body
@@ -313,10 +325,16 @@ const updateOrder = async (req, res, next) => {
       { new: true }
     ).populate('userId').exec();
 
+    // Create a notification
+    const subject = "Order Updated Successfully";
+    const message = `Your order with ID ${id} has been updated successfully. Please check your wallet for your balance.`;
+    const notification = await createNotification(userId, subject, message);
+
     res.status(200).json({
       success: true,
-      message: 'Order updated succussfully',
+      message: 'Order updated successfully',
       order: updatedOrder,
+      notification: notification,
       request: {
         type: 'GET',
         url: `${baseUrl}/orders/${updatedOrder._id}`,

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Transactions = require("../models/transactions");
 const baseUrl = process.env.BASE_URL;
+const createNotification = require("../utils/createNotification");
 
 const getTransactions = (req, res, next) => {
   const filters = []; // Initialize an array to store all filters
@@ -33,7 +34,6 @@ const getTransactions = (req, res, next) => {
 };
 
 const createTransaction = (req, res, next) => {
-
   const transaction = new Transactions({
     _id: new mongoose.Types.ObjectId(),
     userId: req.user.userId,
@@ -53,13 +53,16 @@ const createTransaction = (req, res, next) => {
     status: req.body.status || "active",
     action: req.body.action || "",
     transactionForm: req.body.transactionForm || ""
-
   });
 
   transaction
     .save()
     .then((result) => {
-      console.log(result);
+      // Create notification for user
+      const subject = "Transaction Created";
+      const message = `Your transaction with ID ${result.transactionId} has been created successfully. Please wait for an admin to verify your transaction.`;
+      createNotification(req.user.userId, subject, message);
+
       res.status(201).json({
         success: true,
         message: "Transaction created successfully",
@@ -130,8 +133,7 @@ const getTransactionsByUserId = (req, res, next) => {
 
 const getTransactionsByUser = (req, res, next) => {
   const userId = req.params.userId;
-  console.log(userId);
-  console.log('Hello');
+
 
   // SupportTicket.find({ userId: userId, status: { $ne: 'deleted' } })
   Transactions.find({ userId: userId, status: { $ne: 'deleted' }})
@@ -153,6 +155,7 @@ const getTransactionsByUser = (req, res, next) => {
 };
 
 const updateTransactionByReference = (req, res, next) => {
+  const userId = req.user.userId;
   const referenceId = req.params.referenceId;
   const status = req.body.status || null;
   const updateOps = {};
@@ -164,14 +167,11 @@ const updateTransactionByReference = (req, res, next) => {
         filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
-    console.log(filePath)
   }
 
   // Iterate over the properties of req.body
   for (const propName in req.body) {
-    // Check if the property is not inherited from the prototype chain
     if (Object.prototype.hasOwnProperty.call(req.body, propName)) {
-      // Exclude the 'status' field from updateOps if it's provided
       if (propName !== "status") {
         updateOps[propName] = req.body[propName];
       }
@@ -183,8 +183,8 @@ const updateTransactionByReference = (req, res, next) => {
     updateOps.status = status;
   }
 
-      // Update the updatedAt field to the current date and time
-      updateOps.updatedAt = new Date();
+  // Update the updatedAt field to the current date and time
+  updateOps.updatedAt = new Date();
 
   // Find and update the transaction by reference
   Transactions.findOneAndUpdate(
@@ -195,7 +195,6 @@ const updateTransactionByReference = (req, res, next) => {
     .populate('userId')
     .exec()
     .then((transaction) => {
-      
       if (!transaction) {
         return res.status(404).json({
           success: false,
@@ -203,6 +202,11 @@ const updateTransactionByReference = (req, res, next) => {
           transaction: {}
         });
       }
+
+      // Create notification for user
+      const subject = "Transaction Updated";
+      const message = `Your transaction with reference ID ${transaction.referenceId} has been updated. Please check your transaction history for more details.`;
+      createNotification(userId, subject, message);
 
       res.status(200).json({
         success: true,
@@ -223,9 +227,8 @@ const updateTransactionByReference = (req, res, next) => {
     });
 };
 
-
-
 const updateTransaction = (req, res, next) => {
+  const userId = req.user.userId;
   const id = req.params.transactionId;
   const { status } = req.body;
   const updateOps = {};
@@ -237,14 +240,12 @@ const updateTransaction = (req, res, next) => {
         filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
-    console.log(filePath)
+    console.log(filePath);
   }
 
   // Iterate over the properties of req.body
   for (const propName in req.body) {
-    // Check if the property is not inherited from the prototype chain
     if (Object.prototype.hasOwnProperty.call(req.body, propName)) {
-      // Exclude the 'status' field from updateOps if it's provided
       if (propName !== "status") {
         updateOps[propName] = req.body[propName];
       }
@@ -261,10 +262,15 @@ const updateTransaction = (req, res, next) => {
     .exec()
     .then((result) => {
       let message = "Transaction updated successfully";
-      
+
       Transactions.findById(id)
         .exec()
         .then((transaction) => {
+          // Create notification for user
+          const subject = "Transaction Updated";
+          const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
+          createNotification(userId, subject, message);
+
           res.status(200).json({
             success: true,
             message: message,
@@ -290,6 +296,7 @@ const updateTransaction = (req, res, next) => {
       });
     });
 };
+
 
 
 

@@ -15,6 +15,8 @@ const authRoutes = require('./src/routes/auth.routes');
 const walletRoutes = require('./src/routes/wallet.routes');
 const ticketRoutes = require('./src/routes/supportTicket.routes');
 const transactionRoutes = require('./src/routes/transactions.routes');
+const referralsRoutes = require('./src/routes/referrals.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
 
 const dbUser = process.env.DB_USER;
 const dbPassword = process.env.DB_PASSWORD;
@@ -66,6 +68,8 @@ app.use("/wallets", walletRoutes);
 app.use("/tickets", ticketRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/transactions", transactionRoutes);
+app.use("/referrals", referralsRoutes);
+app.use("/notifications", notificationRoutes);
 
 
 app.use((req, res, next) => {

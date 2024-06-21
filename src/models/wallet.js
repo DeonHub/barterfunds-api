@@ -3,7 +3,6 @@ const User = require("./users");
 const Order = require("./orders");
 
 const walletSchema = mongoose.Schema({
-    _id: mongoose.Schema.Types.ObjectId,
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     walletName: { type: String, required: true, default: 'My Wallet'},
     walletAddress: { type: String, required: true },

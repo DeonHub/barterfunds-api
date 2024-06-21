@@ -5,12 +5,15 @@ const jwt = require("jsonwebtoken");
 const transporter = require("../utils/transporter");
 const Users = require("../models/users");
 const Wallet = require("../models/wallet");
+const Referral = require("../models/referral");
 const hostEmail = process.env.EMAIL_HOST_USER;
 const baseUrl = process.env.BASE_URL;
 const speakeasy = require("speakeasy");
 const QRCode = require("qrcode");
 const sendMail = require("../utils/sendMail");
 const { generateWalletAddress } = require("../controllers/wallet.controllers");
+const createNotification = require("../utils/createNotification");
+
 
 const crypto = require("crypto");
 
@@ -36,7 +39,7 @@ function generateQRCodeURL(authSecretKey, issuer, label, iconURL) {
 }
 
 const generateUsername = (name) => {
-  const randomNumbers = Math.floor(100000 + Math.random() * 900000); // Generates a 6-digit random number
+  const randomNumbers = Math.floor(100000 + Math.random() * 900000);
   return name + randomNumbers;
 };
 
@@ -109,11 +112,12 @@ const Login = async (req, res, next) => {
   try {
     const user = await Users.findOne({ email: req.body.email }).exec();
 
-    if (!user) {
+    if (!user || user.status === "deleted" || user.status === "blocked") {
       return res
         .status(401)
         .json({ success: false, message: "Invalid username or password" });
     }
+
 
     const result = await bcrypt.compare(req.body.password, user.password);
 
@@ -137,6 +141,7 @@ const Login = async (req, res, next) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
 
 
 
@@ -185,10 +190,30 @@ const Signup = async (req, res, next) => {
       activationToken: activationToken,
       activationTokenExpires: Date.now() + 432000000,
       referralCode: generateReferralCode(),
-      referrerCode: req.body.referrerCode ? req.body.referrerCode : ''
+      referrerCode: req.body.ref || ''
     });
 
     const result = await user.save();
+
+    // If referral code is provided, save the referral information
+    if (req.body.ref) {
+      const referrer = await Users.findOne({ referralCode: req.body.ref });
+      if (referrer) {
+        const referral = new Referral({
+          referrer: referrer._id,
+          referee: user._id,
+          referralCode: req.body.ref,
+          status: 'pending'
+        });
+        await referral.save();
+
+        // Create notification for the referrer
+        const subject = "Referral Signup Notification";
+        const message = `${user.firstname} ${user.surname} has signed up using your referral code.`;
+        await createNotification(referrer._id, subject, message);
+      }
+    }
+
     const subject = "BarterFunds Account Activation";
 
     // Send the verification code to the user's email
@@ -202,14 +227,10 @@ const Signup = async (req, res, next) => {
       "If you did not sign up for an account with BarterFunds, please disregard this email.",
       "Activate Account"
     );
-    // (userEmail, token, subject, action, header1, header2, header3, buttonText)
-    // sendMail("pebabot355@rartg.com", "11234567890qwertyuiop", "Account Activation", "account-activation", "Thank you for registering with BarterFunds", "To complete your registration and activate your account, please click on the button below", "If you did not sign up for an account with BarterFunds, please disregard this email.", "Activate Account");
-    // sendMail("pebabot355@rartg.com", "11234567890qwertyuiop", "Password Reset", "reset-password", "Greetings from BarterFunds", "We received a request to reset the password for the BarterFunds account associated with this e-mail address. Click the button below to reset your password.", "If you did not request this, please ignore this email and your password will remain unchanged.", "Reset Password");
 
     res.status(201).json({
       success: true,
       message: "Account created successfully.",
-      // user: result,
     });
   } catch (err) {
     console.error(err);
@@ -220,8 +241,8 @@ const Signup = async (req, res, next) => {
   }
 };
 
-const accountActivation = (req, res, next) => {
-  // const activationToken = req.query.token;
+
+const accountActivation = async (req, res, next) => {
   const { activationToken } = req.body;
 
   if (!activationToken) {
@@ -230,64 +251,74 @@ const accountActivation = (req, res, next) => {
       .json({ success: false, message: "Token is required" });
   }
 
-  // Find user by token
-  Users.findOne({ activationToken: activationToken })
-    .then((user) => {
-      if (!user.verified) {
-        if (user.activationTokenExpires < Date.now()) {
-          return res
-            .status(404)
-            .json({
-              success: false,
-              message: "Invalid or expired activation token",
-            });
-        }
+  try {
+    // Find user by token
+    const user = await Users.findOne({ activationToken: activationToken });
 
-        user.verified = true;
-        user.status = "active";
-        user.activationTokenExpires = null;
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid or expired activation token",
+      });
+    }
 
-        // Save the updated user document
-        user
-          .save()
-          .then(() => {
-            // Create a wallet for the user
-            const wallet = new Wallet({
-              _id: new mongoose.Types.ObjectId(),
-              userId: user._id,
-              walletAddress: generateWalletAddress(64)
-            });
-
-            return wallet.save();
-          })
-          .then(() => {
-            res.status(200).json({
-              success: true,
-              message: "User account activation successful",
-              user: user,
-            });
-          })
-          .catch((err) => {
-            console.error("Error creating wallet:", err);
-            res
-              .status(500)
-              .json({ success: false, message: "Error creating wallet" });
-          });
-      } else {
-        res.status(200).json({
-          success: true,
-          message: "User account already activated",
-          user: user,
+    if (!user.verified) {
+      if (user.activationTokenExpires < Date.now()) {
+        return res.status(404).json({
+          success: false,
+          message: "Invalid or expired activation token",
         });
       }
-    })
-    .catch((err) => {
-      console.error("Error activating account:", err);
-      res
-        .status(500)
-        .json({ success: false, message: "Internal server error" });
-    });
+
+      user.verified = true;
+      user.status = "active";
+      user.activationTokenExpires = null;
+
+      // Save the updated user document
+      await user.save();
+
+      // Subject and message for the notification
+      const subject = "Account Activated Successfully";
+      const message = "Your account has been successfully activated. Welcome to our service!";
+
+      // Create the notification
+      const notification = await createNotification(user._id, subject, message);
+
+      // Create a wallet for the user
+      const wallet = new Wallet({
+        _id: new mongoose.Types.ObjectId(),
+        userId: user._id,
+        walletAddress: generateWalletAddress(64),
+      });
+
+      await wallet.save();
+
+      // Subject and message for the notification
+      const subjectx = "BarterFunds Wallet Activated Successfully";
+      const messagex = "Your BarterFunds Wallet has been successfully activated. You can now make transactions with your wallet";
+
+      // Create the notification
+      const notificationx = await createNotification(user._id, subjectx, messagex);
+
+      res.status(200).json({
+        success: true,
+        message: "User account activation successful",
+        user: user
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        message: "User account already activated",
+        user: user,
+      });
+    }
+  } catch (err) {
+    console.error("Error activating account:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
+
+
 
 
 const forgotPassword = (req, res, next) => {
@@ -335,9 +366,8 @@ const forgotPassword = (req, res, next) => {
 };
 
 
-const resetPassword = (req, res, next) => {
+const resetPassword = async (req, res, next) => {
   const { password, resetToken } = req.body;
-  // const token = req.query.token;
 
   if (!resetToken) {
     return res
@@ -345,53 +375,49 @@ const resetPassword = (req, res, next) => {
       .json({ success: false, message: "Token is required" });
   }
 
-  // Find user by token
-  Users.findOne({ resetToken: resetToken, resetTokenExpires: { $gt: Date.now() } })
-    .then((user) => {
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Invalid or expired reset token. Please request for another password reset link." });
-      }
+  try {
+    // Find user by token
+    const user = await Users.findOne({ resetToken: resetToken, resetTokenExpires: { $gt: Date.now() } });
 
-      // Hash the new password
-      bcrypt.genSalt(10, (err, salt) => {
-        if (err) {
-          throw err;
-        }
-        bcrypt.hash(password, salt, (err, hash) => {
-          if (err) {
-            throw err;
-          }
-          // Update user password with the new hashed password
-          user.password = hash;
-          user.resetToken = null;
-          user.resetTokenExpires = null;
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Invalid or expired reset token. Please request for another password reset link." });
+    }
 
-          // Save the updated user document
-          user
-            .save()
-            .then(() => {
-              res
-                .status(200)
-                .json({ success: true, message: "Password reset successful" });
-            })
-            .catch((err) => {
-              console.error("Error updating password:", err);
-              res
-                .status(500)
-                .json({ success: false, message: "Internal server error" });
-            });
-        });
-      });
-    })
-    .catch((err) => {
-      console.error("Error resetting password:", err);
-      res
-        .status(500)
-        .json({ success: false, message: "Internal server error" });
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
+    // Update user password with the new hashed password
+    user.password = hash;
+    user.resetToken = null;
+    user.resetTokenExpires = null;
+
+    // Save the updated user document
+    await user.save();
+
+    // Subject and message for the notification
+    const subject = "Password Reset Successfully";
+    const message = "Your password has been successfully reset. If you did not perform this action, please contact support immediately.";
+
+    // Create the notification
+    const notification = await createNotification(user._id, subject, message);
+
+    // Send success response with notification details
+    res.status(200).json({
+      success: true,
+      message: "Password reset successful",
+      notification: notification
     });
+  } catch (err) {
+    console.error("Error resetting password:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
 };
+
 
 const updatePassword = async (req, res, next) => {
   try {
@@ -406,18 +432,23 @@ const updatePassword = async (req, res, next) => {
     }
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
     // Update the user's password
 
     user.password = hashedPassword;
     await user.save();
 
+    const subject = "Password Updated Successfully";
+    const message = "Your password has been successfully updated. If you did not perform this action, please contact support immediately.";
+
+    const notification = await createNotification(userId, subject, message);
+
     // Optionally, you can send a success message
-    return res.status(200).json({ message: "Password updated successfully" });
+    return res.status(200).json({success: true, message: "Password updated successfully", notification: notification });
   } catch (error) {
     console.error("Error updating password:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 

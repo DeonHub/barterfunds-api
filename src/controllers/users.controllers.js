@@ -38,7 +38,7 @@ const getUsers = (req, res, next) => {
 
 
 const getUser = async (req, res, next) => {
-  const userId = req.params.userId;
+  const userId = req.user.userId;
   let user;
 
   try {
@@ -85,20 +85,24 @@ const getUser = async (req, res, next) => {
 
 
 const updateUser = (req, res, next) => {
-  const userId = req.params.userId;
+  const userId = req.user.userId;
   const { status } = req.body;
   const updateOps = {};
 
-  // Iterate over the properties of req.body
-  for (const propName in req.body) {
+  if (req.file) {
+    updateOps.profilePicture = req.file.path;
+  }
+
+    // Iterate over the properties of req.body
+    for (const propName in req.body) {
       // Check if the property is not inherited from the prototype chain
       if (Object.prototype.hasOwnProperty.call(req.body, propName)) {
-          // Exclude the 'status' field from updateOps if it's provided
-          if (propName !== 'status') {
-              updateOps[propName] = req.body[propName];
-          }
+        // Exclude the 'status' field from updateOps if it's provided
+        if (propName !== "status") {
+          updateOps[propName] = req.body[propName];
+        }
       }
-  }
+    }
 
   // If status is provided, update it as well
   if (status) {

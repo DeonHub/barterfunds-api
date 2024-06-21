@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const SupportTicket = require("../models/supportTicket");
 const baseUrl = process.env.BASE_URL;
 const path = require("path");
+const createNotification = require("../utils/createNotification");
 
 const generateTicketId = (length) => {
     const characters = '0123456789';
@@ -50,7 +51,7 @@ const createSupportTicket = (req, res, next) => {
         descriptions = [descriptions];
     }
 
-    let fileMetadata = []; // Define fileMetadata outside the if block
+    let fileMetadata = [];
 
     if (files.length !== 0) {
         // Ensure that the number of files matches the number of descriptions
@@ -61,16 +62,8 @@ const createSupportTicket = (req, res, next) => {
             });
         }
 
-        // // Extract file metadata and descriptions and store them in an array
-        // fileMetadata = files.map((file, index) => ({
-        //     originalName: file.originalname,
-        //     path: file.path,
-        //     description: descriptions[index] // Match each file with its corresponding description
-        // }));
-
         // Extract file metadata and descriptions and store them in an array
         fileMetadata = files.map((file, index) => {
-            // Convert absolute path to relative path
             let filePath = file.path;
             if (!filePath.startsWith('http')) {
                 filePath = path.relative(path.join(__dirname, '../..'), filePath);
@@ -79,14 +72,12 @@ const createSupportTicket = (req, res, next) => {
             return {
                 originalName: file.originalname,
                 path: filePath,
-                description: descriptions[index] // Match each file with its corresponding description
+                description: descriptions[index]
             };
         });
-
-
     }
 
-    // Example ticket creation (commented out)
+    // Example ticket creation
     const ticket = new SupportTicket({
         _id: new mongoose.Types.ObjectId(),
         ticketId: generateTicketId(8),
@@ -97,10 +88,13 @@ const createSupportTicket = (req, res, next) => {
         files: files.length > 0 ? fileMetadata : [],
     });
 
-    ticket
-        .save()
+    ticket.save()
         .then(result => {
-            console.log(result);
+            // Create notification for user
+            const subject = "Support Ticket Created";
+            const message = `Your support ticket ${ticket.ticketId} has been created successfully. We will get back to you soon.`;
+            createNotification(userId, subject, message);
+
             res.status(201).json({
                 success: true,
                 message: "Support ticket created successfully",
@@ -108,7 +102,7 @@ const createSupportTicket = (req, res, next) => {
             });
         })
         .catch(err => {
-            console.log(err);
+            console.error(err);
             res.status(500).json({
                 success: false,
                 error: err,
@@ -141,11 +135,10 @@ const getSupportTicketById = (req, res, next) => {
 
 
 const updateSupportTicket = (req, res, next) => {
+    const userId = req.user.userId;
     const id = req.params.ticketId;
     const status = req.body.status || null;
     const updateOps = {};
-
-    console.log(`Received update request for ticket ID: ${id}`);
 
     // Validate if the status is one of the allowed values
     if (status && (status === "open" || status === "closed" || status === "pending" || status === "resolved")) {
@@ -163,7 +156,6 @@ const updateSupportTicket = (req, res, next) => {
 
     // Update the updatedAt field to the current date and time
     updateOps.updatedAt = new Date();
-
 
     // If no valid update operations are provided, return an error
     if (Object.keys(updateOps).length === 0) {
@@ -183,6 +175,12 @@ const updateSupportTicket = (req, res, next) => {
             if (!ticket) {
                 return res.status(404).json({ success: false, message: "Ticket not found." });
             }
+
+            // Create notification for user
+            const subject = "Support Ticket Updated";
+            const message = `Your support ticket ${ticket.ticketId} has been updated successfully. Check the status for more details.`;
+            createNotification(userId, subject, message);
+
             res.status(200).json({
                 success: true,
                 message: "Support ticket updated successfully",
@@ -201,6 +199,7 @@ const updateSupportTicket = (req, res, next) => {
             });
         });
 };
+
 
 
 const deleteSupportTicket = (req, res, next) => {
