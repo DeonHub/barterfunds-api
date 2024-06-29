@@ -217,32 +217,49 @@ const updateKyc = (req, res, next) => {
             } 
             // Handle the case when KYC is rejected
             else if (status === 'rejected' && kyc.userId) {
-              Users.updateOne({ _id: kyc.userId }, { $set: { kycApproved: false } })
-                .exec()
-                .then(async () => {
-                  const subject = "KYC Rejected";
-                  const message = "Your KYC has been rejected. Please check your details and submit again.";
+              const subject = "KYC Rejected";
+              const message = "Your KYC has been rejected. Please check your details and submit again.";
+              
+              const notification = createNotification(kyc.userId, subject, message);
+              console.log('Notification created:', notification);
+
+              res.status(200).json({
+                success: true,
+                message: "KYC status updated successfully",
+                kyc: kyc,
+                notification: notification,
+                request: {
+                  type: "GET",
+                  url: `${baseUrl}/kycs/` + id,
+                },
+              });
+
+              // Users.updateOne({ _id: kyc.userId })
+              //   .exec()
+              //   .then(async () => {
+              //     const subject = "KYC Rejected";
+              //     const message = "Your KYC has been rejected. Please check your details and submit again.";
                   
-                  const notification = await createNotification(kyc.userId, subject, message);
-                  console.log('Notification created:', notification);
+              //     const notification = await createNotification(kyc.userId, subject, message);
+              //     console.log('Notification created:', notification);
   
-                  res.status(200).json({
-                    success: true,
-                    message: "KYC status updated successfully",
-                    kyc: kyc,
-                    notification: notification,
-                    request: {
-                      type: "GET",
-                      url: `${baseUrl}/kycs/` + id,
-                    },
-                  });
-                })
-                .catch((err) => {
-                  res.status(500).json({
-                    success: false,
-                    error: err,
-                  });
-                });
+              //     res.status(200).json({
+              //       success: true,
+              //       message: "KYC status updated successfully",
+              //       kyc: kyc,
+              //       notification: notification,
+              //       request: {
+              //         type: "GET",
+              //         url: `${baseUrl}/kycs/` + id,
+              //       },
+              //     });
+              //   })
+                // .catch((err) => {
+                //   res.status(500).json({
+                //     success: false,
+                //     error: err,
+                //   });
+                // });
             } 
             // Handle other status updates
             else {
