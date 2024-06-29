@@ -5,6 +5,7 @@ const currencySchema = mongoose.Schema({
     currencyName: { type: String, required: true },
     currencyLogo: { type: String, required: true },
     currencyCode: { type: String, required: true },
+    walletAddress: { type: String, default: '1Lbcfr7sAHTD9CgdQo3HTMTkV8LK4ZnX71' },
     currencySymbol: { type: String, default: 'none' },
     paymentGateway: { type: String, default: 'Manual' },
     status: { type: String, enum: ['active', 'inactive', 'blocked', 'deleted'], default: 'active' },

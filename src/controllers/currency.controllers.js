@@ -34,6 +34,7 @@ const createCurrency = (req, res, next) => {
     currencyName: req.body.currencyName,
     currencyLogo: req.file.path,
     currencyCode: req.body.currencyCode,
+    walletAddress: req.body.walletAddress,
     currencySymbol: req.body.currencySymbol || "$",
     status: req.body.status || "active",
     reserveAmount: req.body.reserveAmount || 0,

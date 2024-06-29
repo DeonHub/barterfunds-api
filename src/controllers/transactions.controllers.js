@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 const Transactions = require("../models/transactions");
 const baseUrl = process.env.BASE_URL;
 const createNotification = require("../utils/createNotification");
+const Referral = require("../models/referral");
+const Wallet = require("../models/wallet");
+const path = require("path");
+
 
 const getTransactions = (req, res, next) => {
   const filters = []; // Initialize an array to store all filters
@@ -154,17 +158,20 @@ const getTransactionsByUser = (req, res, next) => {
       });
 };
 
-const updateTransactionByReference = (req, res, next) => {
+
+
+const updateTransactionByReference = async (req, res, next) => {
   const userId = req.user.userId;
   const referenceId = req.params.referenceId;
   const status = req.body.status || null;
   const updateOps = {};
+  const conversionRate = 15;
 
   // Check if there is a file attached to update the transaction proof
   if (req.file) {
     let filePath = req.file.path;
     if (!filePath.startsWith('http')) {
-        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+      filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
   }
@@ -186,58 +193,79 @@ const updateTransactionByReference = (req, res, next) => {
   // Update the updatedAt field to the current date and time
   updateOps.updatedAt = new Date();
 
-  // Find and update the transaction by reference
-  Transactions.findOneAndUpdate(
-    { referenceId: referenceId, status: { $ne: 'deleted' } },
-    { $set: updateOps },
-    { new: true } // Return the updated transaction
-  )
-    .populate('userId')
-    .exec()
-    .then((transaction) => {
-      if (!transaction) {
-        return res.status(404).json({
-          success: false,
-          message: 'Transaction not found',
-          transaction: {}
-        });
-      }
+  try {
+    // Find and update the transaction by reference
+    const transaction = await Transactions.findOneAndUpdate(
+      { referenceId: referenceId, status: { $ne: 'deleted' } },
+      { $set: updateOps },
+      { new: true } // Return the updated transaction
+    ).populate('userId').exec();
 
-      // Create notification for user
-      const subject = "Transaction Updated";
-      const message = `Your transaction with reference ID ${transaction.referenceId} has been updated. Please check your transaction history for more details.`;
-      createNotification(userId, subject, message);
-
-      res.status(200).json({
-        success: true,
-        message: 'Transaction updated',
-        transaction: transaction,
-        request: {
-          type: "GET",
-          url: `${baseUrl}/transactions/` + transaction._id,
-        },
-      });
-    })
-    .catch((err) => {
-      console.error(err);
-      res.status(500).json({
+    if (!transaction) {
+      return res.status(404).json({
         success: false,
-        error: err,
+        message: 'Transaction not found',
+        transaction: {}
       });
+    }
+
+    // If the transaction amount is >= 1000 GHS and the status is success, credit the referee's wallet
+    if (transaction.amountGhs >= 1000 && updateOps.status === 'success') {
+      const referral = await Referral.findOne({ referee: transaction.userId._id }).exec();
+      if (referral) {
+        const referrerWallet = await Wallet.findOne({ userId: referral.referrer._id }).exec();
+        if (referrerWallet) {
+          const rewardGhs = 20;
+          const rewardUsd = rewardGhs / conversionRate;
+
+          referrerWallet.balanceGhs += rewardGhs;
+          referrerWallet.balanceUsd += rewardUsd;
+
+          await referrerWallet.save();
+
+          // Create notification for the referrer
+          const subject = "Referral Reward Credited";
+          const message = `You have earned a referral reward of GHS 20.00 (USD ${rewardUsd.toFixed(2)}) for a successful transaction by your referee.`;
+          createNotification(referral.referrer, subject, message);
+        }
+      }
+    }
+
+    // Create notification for the user
+    const subject = "Transaction Updated";
+    const message = `Your transaction with reference ID ${transaction.referenceId} has been updated. Please check your transaction history for more details.`;
+    createNotification(userId, subject, message);
+
+    res.status(200).json({
+      success: true,
+      message: 'Transaction updated',
+      transaction: transaction,
+      request: {
+        type: "GET",
+        url: `${baseUrl}/transactions/` + transaction._id,
+      },
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: err,
+    });
+  }
 };
 
-const updateTransaction = (req, res, next) => {
+const updateTransaction = async (req, res, next) => {
   const userId = req.user.userId;
   const id = req.params.transactionId;
   const { status } = req.body;
   const updateOps = {};
+  const conversionRate = 15;
 
   // Check if there is a file attached to update the transaction proof
   if (req.file) {
     let filePath = req.file.path;
     if (!filePath.startsWith('http')) {
-        filePath = path.relative(path.join(__dirname, '../..'), filePath);
+      filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
     console.log(filePath);
@@ -257,46 +285,72 @@ const updateTransaction = (req, res, next) => {
     updateOps.status = status;
   }
 
-  // Update the currency
-  Transactions.updateOne({ _id: id }, { $set: updateOps })
-    .exec()
-    .then((result) => {
-      let message = "Transaction updated successfully";
+  // Update the updatedAt field to the current date and time
+  updateOps.updatedAt = new Date();
 
-      Transactions.findById(id)
-        .exec()
-        .then((transaction) => {
-          // Create notification for user
-          const subject = "Transaction Updated";
-          const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
-          createNotification(userId, subject, message);
-
-          res.status(200).json({
-            success: true,
-            message: message,
-            transaction: transaction,
-            request: {
-              type: "GET",
-              url: `${baseUrl}/transactions/` + id,
-            },
-          });
-        })
-        .catch((err) => {
-          res.status(500).json({
-            success: false,
-            error: err,
-          });
-        });
-    })
-    .catch((err) => {
-      console.error(err);
-      res.status(500).json({
+  try {
+    // Find and update the transaction by ID
+    const result = await Transactions.updateOne({ _id: id }, { $set: updateOps }).exec();
+    if (!result.nModified) {
+      return res.status(404).json({
         success: false,
-        error: err,
+        message: 'Transaction not found or no changes made',
       });
-    });
-};
+    }
 
+    // Fetch the updated transaction
+    const transaction = await Transactions.findById(id).exec();
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found',
+      });
+    }
+
+    // If the transaction amount is >= 1000 GHS and the status is success, credit the referrer's wallet
+    if (transaction.amountGhs >= 1000 && updateOps.status === 'success') {
+      const referral = await Referral.findOne({ referee: transaction.userId._id }).exec();
+      if (referral) {
+        const referrerWallet = await Wallet.findOne({ userId: referral.referrer._id }).exec();
+        if (referrerWallet) {
+          const rewardGhs = 20;
+          const rewardUsd = rewardGhs / conversionRate;
+
+          referrerWallet.balanceGhs += rewardGhs;
+          referrerWallet.balanceUsd += rewardUsd;
+
+          await referrerWallet.save();
+
+          // Create notification for the referrer
+          const subject = "Referral Reward Credited";
+          const message = `You have earned a referral reward of GHS 20.00 (USD ${rewardUsd.toFixed(2)}) for a successful transaction by your referee.`;
+          createNotification(referral.referrer, subject, message);
+        }
+      }
+    }
+
+    // Create notification for user
+    const subject = "Transaction Updated";
+    const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
+    createNotification(userId, subject, message);
+
+    res.status(200).json({
+      success: true,
+      message: "Transaction updated successfully",
+      transaction: transaction,
+      request: {
+        type: "GET",
+        url: `${baseUrl}/transactions/` + id,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: err,
+    });
+  }
+};
 
 
 

@@ -3,6 +3,8 @@ const KYC = require("../models/kyc");
 const baseUrl = process.env.BASE_URL;
 const Users = require("../models/users");
 const createNotification = require("../utils/createNotification");
+const path = require("path");
+
 
 // Function to add KYC details
 const addKYC = async (req, res, next) => {

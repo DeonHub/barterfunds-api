@@ -113,6 +113,89 @@ const createSupportTicket = (req, res, next) => {
 
 
 
+const replySupportTicket = async (req, res, next) => {
+    const userId = req.user.userId;
+    const ticketId = req.params.ticketId;
+    const files = req.files ? req.files : [];
+    let descriptions = req.body.descriptions ? req.body.descriptions : [];
+  
+    // Ensure descriptions is always an array
+    if (!Array.isArray(descriptions)) {
+      descriptions = [descriptions];
+    }
+  
+    let fileMetadata = [];
+  
+    if (files.length !== 0) {
+      // Ensure that the number of files matches the number of descriptions
+      if (files.length !== descriptions.length) {
+        return res.status(400).json({
+          success: false,
+          message: "Number of files does not match the number of descriptions"
+        });
+      }
+  
+      // Extract file metadata and descriptions and store them in an array
+      fileMetadata = files.map((file, index) => {
+        let filePath = file.path;
+        if (!filePath.startsWith('http')) {
+          filePath = path.relative(path.join(__dirname, '../..'), filePath);
+        }
+  
+        return {
+          originalName: file.originalname,
+          path: filePath,
+          description: descriptions[index]
+        };
+      });
+    }
+
+    try {
+      // Find the support ticket by ID
+      const ticket = await SupportTicket.findById(ticketId);
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: "Support ticket not found"
+        });
+      }
+  
+      // Add the reply to the ticket's replies array
+      const reply = {
+        authorId: userId,
+        role: req.body.role,
+        message: req.body.message,
+        files: files.length > 0 ? fileMetadata : []
+      };
+  
+      ticket.replies.push(reply);
+      ticket.updatedAt = Date.now();
+  
+      await ticket.save();
+  
+      // Create notification for user if the reply is not from the user
+      if (ticket.userId._id.toString() !== userId.toString()) {
+      const subject = "Support Ticket Reply";
+      const message = `You have a new reply on your support ticket ${ticket.ticketId}. Please check the ticket for details.`;
+      createNotification(ticket.userId._id, subject, message);
+      }
+
+  
+      res.status(201).json({
+        success: true,
+        message: "Reply added successfully",
+        updatedTicket: ticket
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({
+        success: false,
+        error: err,
+        message: "Error adding reply. Please try again."
+      });
+    }
+  };
+
 
 
 const getSupportTicketById = (req, res, next) => {
@@ -251,5 +334,6 @@ module.exports = {
     getSupportTicketById,
     deleteSupportTicket,
     updateSupportTicket,
-    getSupportTicketsByUserId
+    getSupportTicketsByUserId,
+    replySupportTicket
 };

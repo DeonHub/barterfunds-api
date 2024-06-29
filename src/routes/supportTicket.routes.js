@@ -13,7 +13,8 @@ const {
   getSupportTicketById,
   deleteSupportTicket,
   updateSupportTicket,
-  getSupportTicketsByUserId
+  getSupportTicketsByUserId,
+  replySupportTicket
    } = require('../controllers/supportTicket.controllers');
 
 
@@ -22,6 +23,7 @@ router.post("/", checkAuth, upload.array('files', 5), createSupportTicket);
 router.get("/x/user", checkAuth, getSupportTicketsByUserId);
 router.get("/:ticketId", checkAuth, getSupportTicketById);
 router.patch("/:ticketId", checkAuth, updateSupportTicket);
+router.patch("/x/:ticketId", checkAuth, upload.array('files', 5), replySupportTicket);
 router.delete("/:ticketId", checkAuth, deleteSupportTicket);
 
 module.exports = router;

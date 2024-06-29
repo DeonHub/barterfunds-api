@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Orders = require("../models/orders");
 const Wallet = require("../models/wallet");
 const baseUrl = process.env.BASE_URL;
+const path = require("path");
 const createNotification = require("../utils/createNotification");
 
 const getOrders = (req, res, next) => {

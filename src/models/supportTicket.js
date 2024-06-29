@@ -1,5 +1,18 @@
 const mongoose = require('mongoose');
 
+const replySchema = new mongoose.Schema({
+    authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    role: { type: String, enum: ['user', 'admin'], required: true },
+    message: { type: String, required: true },
+    files: [{ 
+      description: String,
+      originalName: String,
+      path: String,
+    }],
+    createdAt: { type: Date, default: Date.now }
+  });
+  
+
 const supportTicketSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     ticketId: { type: String, required: true },
@@ -17,6 +30,7 @@ const supportTicketSchema = mongoose.Schema({
         originalName: String,
         path: String,
     }],
+    replies: [replySchema],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 
