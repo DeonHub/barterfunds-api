@@ -5,12 +5,23 @@ const baseUrl = process.env.BASE_URL;
 const path = require("path");
 const createNotification = require("../utils/createNotification");
 
-const getOrders = (req, res, next) => {
+const getOrders = async (req, res, next) => {
   const filters = [];
   filters.push({ status: { $ne: 'deleted' } });
 
   // Combine all filters into a single filter object using $and
   const filter = { $and: filters };
+  const matchStage = {
+    status: 'pending',
+  };
+
+  const totalPendingAmountGhs = await Orders.aggregate([{$match: { status: 'pending' }},{ $group: {_id: null, totalAmount: { $sum: "$amountGhs" }}}]);
+  const totalApprovedAmountGhs = await Orders.aggregate([{$match: { status: 'success' }},{ $group: {_id: null, totalAmount: { $sum: "$amountGhs" }}}]);
+  const totalFailedAmountGhs = await Orders.aggregate([{$match: { status: 'failed' }},{ $group: {_id: null, totalAmount: { $sum: "$amountGhs" }}}]);
+
+  const totalPendingOrders = totalPendingAmountGhs.length > 0 ? totalPendingAmountGhs[0].totalAmount : 0;
+  const totalApprovedOrders = totalApprovedAmountGhs.length > 0 ? totalApprovedAmountGhs[0].totalAmount : 0;
+  const totalFailedOrders = totalFailedAmountGhs.length > 0 ? totalFailedAmountGhs[0].totalAmount : 0;
 
   Orders.find(filter)
     .populate('userId')
@@ -22,6 +33,12 @@ const getOrders = (req, res, next) => {
         count: orders.length,
         success: true,
         orders: orders,
+        data: {
+          totalPendingOrders: totalPendingOrders,
+          totalApprovedOrders: totalApprovedOrders,
+          totalFailedOrders: totalFailedOrders
+        }
+
       });
     })
     .catch((err) => {

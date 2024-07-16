@@ -7,6 +7,8 @@ const Wallet = require("../models/wallet");
 const Currencies = require("../models/currency");
 const SupportTickets = require("../models/supportTicket");
 const Referrals = require("../models/referral");
+const Transactions = require("../models/transactions");
+const Orders = require("../models/orders");
 
 const getAdminDashboard = async (req, res, next) => {
     try {
@@ -43,6 +45,9 @@ const getAdminDashboard = async (req, res, next) => {
         const closedTickets = await SupportTickets.countDocuments({ status: 'closed' });
         const pendingTickets = await SupportTickets.countDocuments({ status: 'pending' });
 
+        const totalTransactions = await Transactions.countDocuments({ status: { $ne: 'deleted' } });
+        const totalOrders = await Orders.countDocuments({ status: { $ne: 'deleted' } });
+
 
         // Return the aggregated data
         res.status(200).json({
@@ -64,7 +69,9 @@ const getAdminDashboard = async (req, res, next) => {
                 totalTickets,
                 openTickets,
                 closedTickets,
-                pendingTickets
+                pendingTickets,
+                totalTransactions,
+                totalOrders
             }
         });
     } catch (err) {

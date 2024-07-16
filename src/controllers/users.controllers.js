@@ -85,7 +85,7 @@ const getUser = async (req, res, next) => {
 
 
 const updateUser = (req, res, next) => {
-  const userId = req.user.userId;
+  const userId = req.params.userId;
   const { status } = req.body;
   const updateOps = {};
 
