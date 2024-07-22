@@ -61,7 +61,8 @@ const createOrder = async (req, res, next) => {
     amountUsd: req.body.amountUsd,
     paymentMethod: req.body.paymentMethod || "",
     receipientMethod: req.body.receipientMethod || "",
-    receipientNumber: req.body.receipientNumber || ""
+    receipientNumber: req.body.receipientNumber || "",
+    paymentNumber: req.body.paymentNumber || ""
   });
 
   try {
@@ -310,29 +311,34 @@ const updateOrder = async (req, res, next) => {
     }
 
     // Check the order action and handle wallet balance updates for withdrawals
-    if (order.action === 'withdraw') {
-      const wallet = await Wallet.findById(order.walletId).exec();
+    const wallet = await Wallet.findById(order.walletId).exec();
 
-      if (!wallet) {
-        return res.status(404).json({
-          success: false,
-          message: 'Associated wallet not found',
-        });
+    if (!wallet) {
+      return res.status(404).json({
+        success: false,
+        message: 'Associated wallet not found',
+      });
+    }
+
+    if (order.action === 'withdraw') {
+    // Deduct wallet balances
+    wallet.balanceGhs -= order.amountGhs;
+    wallet.balanceUsd -= order.amountUsd;
+    } else {
+      // Add wallet balances
+      wallet.balanceGhs += order.amountGhs;
+      wallet.balanceUsd += order.amountUsd;
       }
 
-      // Deduct wallet balances
-      wallet.balanceGhs -= order.amountGhs;
-      wallet.balanceUsd -= order.amountUsd;
+    // Save the updated wallet
+    await wallet.save();
 
-      // Save the updated wallet
-      await wallet.save();
-
-      // Update the order balances and set walletCredited and confirmedPayment to true
-      updateOps.balanceGhs = wallet.balanceGhs;
-      updateOps.balanceUsd = wallet.balanceUsd;
-      updateOps.confirmedPayment = true;
-      updateOps.status = 'success';
-    }
+    // Update the order balances and set walletCredited and confirmedPayment to true
+    updateOps.balanceGhs = wallet.balanceGhs;
+    updateOps.balanceUsd = wallet.balanceUsd;
+    updateOps.confirmedPayment = true;
+    updateOps.status = 'success';
+ 
 
     // Update the updatedAt field to the current date and time
     updateOps.updatedAt = new Date();
