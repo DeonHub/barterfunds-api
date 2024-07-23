@@ -11,11 +11,14 @@ const {
   createCurrency,
   getCurrencyById,
   updateCurrency,
-  deleteCurrency
+  deleteCurrency,
+  getCurrenciex
    } = require('../controllers/currency.controllers');
 
 
-router.get("/", checkAuth, getCurrencies);
+router.get("/", getCurrencies);
+router.get("/x", getCurrenciex);
+// router.get("/", checkAuth, getCurrencies);
 router.post("/",  checkAuth, upload.single('currencyLogo'), createCurrency);
 router.get("/:currencyId", checkAuth, getCurrencyById);
 router.patch("/:currencyId", checkAuth, upload.single('currencyLogo'), updateCurrency);

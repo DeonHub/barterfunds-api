@@ -3,9 +3,12 @@ const Currency = require("../models/currency");
 const baseUrl = process.env.BASE_URL;
 
 const getCurrencies = (req, res, next) => {
-  const filters = []; // Initialize an array to store all filters
-  filters.push({ status: { $ne: 'deleted' } });
-  // filters.push({ isAdmin: false });
+  const filters = [{ status: { $ne: 'deleted' } }]; // Initialize an array to store all filters
+
+  // Check if a status query parameter is provided and add it to the filters
+  if (req.query.status) {
+    filters.push({ status: req.query.status });
+  }
 
   // Combine all filters into a single filter object using $and
   const filter = { $and: filters };
@@ -27,6 +30,36 @@ const getCurrencies = (req, res, next) => {
       });
     });
 };
+
+const getCurrenciex = (req, res, next) => {
+  const filters = [{ status: { $ne: 'deleted' } }]; // Initialize an array to store all filters
+
+  // Check if a status query parameter is provided and add it to the filters
+  if (req.query.status) {
+    filters.push({ status: req.query.status });
+  }
+
+  // Combine all filters into a single filter object using $and
+  const filter = { $and: filters };
+
+  Currency.find(filter)
+    .exec()
+    .then((currencies) => {
+      res.status(200).json({
+        count: currencies.length,
+        success: true,
+        currencies: currencies,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({
+        success: false,
+        error: err,
+      });
+    });
+};
+
 
 const createCurrency = (req, res, next) => {
   const currency = new Currency({
@@ -217,4 +250,5 @@ module.exports = {
   getCurrencyById,
   updateCurrency,
   deleteCurrency,
+  getCurrenciex
 };

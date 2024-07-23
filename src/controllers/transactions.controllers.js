@@ -4,6 +4,7 @@ const baseUrl = process.env.BASE_URL;
 const createNotification = require("../utils/createNotification");
 const Referral = require("../models/referral");
 const Wallet = require("../models/wallet");
+const Currency = require("../models/currency");
 const path = require("path");
 
 
@@ -254,6 +255,112 @@ const updateTransactionByReference = async (req, res, next) => {
   }
 };
 
+// const updateTransaction = async (req, res, next) => {
+//   const userId = req.user.userId;
+//   const id = req.params.transactionId;
+//   const { status } = req.body;
+//   const updateOps = {};
+//   const conversionRate = 15;
+
+//   // Check if there is a file attached to update the transaction proof
+//   if (req.file) {
+//     let filePath = req.file.path;
+//     if (!filePath.startsWith('http')) {
+//       filePath = path.relative(path.join(__dirname, '../..'), filePath);
+//     }
+//     updateOps.paymentProof = filePath;
+//     console.log(filePath);
+//   }
+
+//   // Iterate over the properties of req.body
+//   for (const propName in req.body) {
+//     if (Object.prototype.hasOwnProperty.call(req.body, propName)) {
+//       if (propName !== "status") {
+//         updateOps[propName] = req.body[propName];
+//       }
+//     }
+//   }
+
+//   // If status is provided, update it as well
+//   if (status) {
+//     updateOps.status = status;
+//   }
+
+//   // Update the updatedAt field to the current date and time
+//   updateOps.updatedAt = new Date();
+
+//   try {
+//     // Find and update the transaction by ID
+//     const result = await Transactions.updateOne({ _id: id }, { $set: updateOps }).exec();
+//     console.log("After reslut");
+
+//     // if (!result.nModified) {
+//     //   return res.status(404).json({
+//     //     success: false,
+//     //     message: 'Transaction not found or no changes made',
+//     //   });
+//     // }
+
+//     // Fetch the updated transaction
+//     const transaction = await Transactions.findById(id).exec();
+//     console.log("transaction found");
+//     if (!transaction) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Transaction not found',
+//       });
+//     }
+
+//     console.log("before referal");
+//     // If the transaction amount is >= 1000 GHS and the status is success, credit the referrer's wallet
+//     if (transaction.amountGhs >= 1000 && updateOps.status === 'success') {
+//       console.log("Inside refereal");
+//       const referral = await Referral.findOne({ referee: transaction.userId._id }).exec();
+//       if (referral) {
+//         console.log("IReferal found");
+//         const referrerWallet = await Wallet.findOne({ userId: referral.referrer._id }).exec();
+//         if (referrerWallet) {
+//           const rewardGhs = 20;
+//           const rewardUsd = rewardGhs / conversionRate;
+
+//           referrerWallet.balanceGhs += rewardGhs;
+//           referrerWallet.balanceUsd += rewardUsd;
+
+//           await referrerWallet.save();
+
+//           // Create notification for the referrer
+//           const subject = "Referral Reward Credited";
+//           const message = `You have earned a referral reward of GHS 20.00 (USD ${rewardUsd.toFixed(2)}) for a successful transaction by your referee.`;
+//           createNotification(referral.referrer, subject, message);
+//         }
+//       }
+//       console.log("referral not found");
+//     }
+
+//     console.log("Creating notifiaction");
+//     // Create notification for user
+//     const subject = "Transaction Updated";
+//     const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
+//     createNotification(userId, subject, message);
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Transaction updated successfully",
+//       transaction: transaction,
+//       request: {
+//         type: "GET",
+//         url: `${baseUrl}/transactions/` + id,
+//       },
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       error: err,
+//     });
+//   }
+// };
+
 const updateTransaction = async (req, res, next) => {
   const userId = req.user.userId;
   const id = req.params.transactionId;
@@ -291,15 +398,11 @@ const updateTransaction = async (req, res, next) => {
   try {
     // Find and update the transaction by ID
     const result = await Transactions.updateOne({ _id: id }, { $set: updateOps }).exec();
-    if (!result.nModified) {
-      return res.status(404).json({
-        success: false,
-        message: 'Transaction not found or no changes made',
-      });
-    }
+    console.log("After result");
 
     // Fetch the updated transaction
     const transaction = await Transactions.findById(id).exec();
+    console.log("transaction found");
     if (!transaction) {
       return res.status(404).json({
         success: false,
@@ -307,10 +410,13 @@ const updateTransaction = async (req, res, next) => {
       });
     }
 
+    console.log("before referral");
     // If the transaction amount is >= 1000 GHS and the status is success, credit the referrer's wallet
     if (transaction.amountGhs >= 1000 && updateOps.status === 'success') {
+      console.log("Inside referral");
       const referral = await Referral.findOne({ referee: transaction.userId._id }).exec();
       if (referral) {
+        console.log("Referral found");
         const referrerWallet = await Wallet.findOne({ userId: referral.referrer._id }).exec();
         if (referrerWallet) {
           const rewardGhs = 20;
@@ -327,8 +433,23 @@ const updateTransaction = async (req, res, next) => {
           createNotification(referral.referrer, subject, message);
         }
       }
+      console.log("referral not found");
     }
 
+    // Update the currency reserve amount if the transaction is successful
+    if (updateOps.status === 'success') {
+      const currency = await Currency.findById(transaction.currencyId._id).exec();
+      if (currency) {
+        if (transaction.transactionType === 'buy' || transaction.transactionType === 'send') {
+          currency.reserveAmount -= transaction.amountGhs;
+        } else if (transaction.transactionType === 'sell' || transaction.transactionType === 'receive') {
+          currency.reserveAmount += transaction.amountGhs;
+        }
+        await currency.save();
+      }
+    }
+
+    console.log("Creating notification");
     // Create notification for user
     const subject = "Transaction Updated";
     const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
