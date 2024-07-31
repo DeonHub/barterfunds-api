@@ -12,7 +12,10 @@ const getReferrals = (req, res, next) => {
   const filter = { $and: filters };
 
   Referrals.find(filter)
+        .populate('referrer')
+        .populate('referee')
       .exec()
+  
       .then(result => {
           const response = {
               success: true,

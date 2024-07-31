@@ -327,6 +327,30 @@ const getSupportTicketsByUserId = (req, res, next) => {
         });
 };
 
+const getSupportTicketsByUser = (req, res, next) => {
+    const userId = req.params.userId;
+  
+  
+    // SupportTicket.find({ userId: userId, status: { $ne: 'deleted' } })
+    SupportTicket.find({ userId: userId, status: { $ne: 'deleted' }})
+        .exec()
+        .then(tickets => {
+            res.status(200).json({
+                success: true,
+                count: tickets.length,
+                tickets: tickets
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({
+                success: false,
+                error: err
+            });
+        });
+  };
+  
+
 
 module.exports = {
     getSupportTickets,
@@ -335,5 +359,6 @@ module.exports = {
     deleteSupportTicket,
     updateSupportTicket,
     getSupportTicketsByUserId,
+    getSupportTicketsByUser,
     replySupportTicket
 };

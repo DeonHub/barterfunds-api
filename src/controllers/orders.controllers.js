@@ -143,8 +143,16 @@ const getOrdersByUserId = (req, res, next) => {
       });
 };
 
-const getOrdersByUser = (req, res, next) => {
+const getOrdersByUser = async (req, res, next) => {
   const userId = req.params.userId;
+
+  const totalPendingAmountGhs = await Orders.aggregate([{$match: { userId: userId, status: 'pending' }},{ $group: {_id: null, totalAmount: { $sum: "$amountGhs" }}}]);
+  const totalApprovedAmountGhs = await Orders.aggregate([{$match: { userId: userId, status: 'success' }},{ $group: {_id: null, totalAmount: { $sum: "$amountGhs" }}}]);
+  const totalFailedAmountGhs = await Orders.aggregate([{$match: { userId: userId, status: 'failed' }},{ $group: {_id: null, totalAmount: { $sum: "$amountGhs" }}}]);
+
+  const totalPendingOrders = totalPendingAmountGhs.length > 0 ? totalPendingAmountGhs[0].totalAmount : 0;
+  const totalApprovedOrders = totalApprovedAmountGhs.length > 0 ? totalApprovedAmountGhs[0].totalAmount : 0;
+  const totalFailedOrders = totalFailedAmountGhs.length > 0 ? totalFailedAmountGhs[0].totalAmount : 0;
 
   // SupportTicket.find({ userId: userId, status: { $ne: 'deleted' } })
   Orders.find({ userId: userId, status: { $ne: 'deleted' }})
@@ -153,7 +161,12 @@ const getOrdersByUser = (req, res, next) => {
           res.status(200).json({
               success: true,
               count: orders.length,
-              orders: orders
+              orders: orders,
+              data: {
+                totalPendingOrders: totalPendingOrders,
+                totalApprovedOrders: totalApprovedOrders,
+                totalFailedOrders: totalFailedOrders
+              }
           });
       })
       .catch(err => {
@@ -334,8 +347,8 @@ const updateOrder = async (req, res, next) => {
     await wallet.save();
 
     // Update the order balances and set walletCredited and confirmedPayment to true
-    updateOps.balanceGhs = wallet.balanceGhs;
-    updateOps.balanceUsd = wallet.balanceUsd;
+    updateOps.balanceGhs = Number(wallet.balanceGhs);
+    updateOps.balanceUsd = Number(wallet.balanceUsd || 0);
     updateOps.confirmedPayment = true;
     updateOps.status = 'success';
  

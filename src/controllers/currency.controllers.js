@@ -32,8 +32,7 @@ const getCurrencies = (req, res, next) => {
 };
 
 const getCurrenciex = (req, res, next) => {
-  const filters = [{ status: { $ne: 'deleted' } }]; // Initialize an array to store all filters
-
+  const filters = [{ status: { $ne: 'deleted' }, status: { $ne: 'inactive' } }]; // Initialize an array to store all filters
   // Check if a status query parameter is provided and add it to the filters
   if (req.query.status) {
     filters.push({ status: req.query.status });

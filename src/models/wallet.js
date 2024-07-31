@@ -8,7 +8,7 @@ const walletSchema = mongoose.Schema({
     walletAddress: { type: String, required: true },
     currencyType: { type: String, required: true, default: 'All' },
     balanceGhs: { type: Number, default: 0 },
-    balanceUsd: { type: Number, default: 0 },
+    referralEarned: { type: Number, default: 0 },
 
     status: { type: String, enum: ['active', 'inactive', 'suspended', 'deleted'], default: 'active' },
     walletType: { type: String, enum: ['personal', 'business'], default: 'personal' },

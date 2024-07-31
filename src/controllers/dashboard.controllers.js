@@ -95,7 +95,7 @@ const getUserDashboard = async (req, res, next) => {
         const referralCode = user.referralCode;
 
         // Get all currencies
-        const currencies = await Currencies.find({}).sort({ createdAt: -1 }).limit(9);
+        const currencies = await Currencies.find({}).limit(9);
 
         // Get the user's wallet
         const wallet = await Wallet.findOne({ userId: userId, status: { $ne: 'deleted' }})

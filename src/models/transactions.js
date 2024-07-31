@@ -6,6 +6,8 @@ const transactionsSchema = mongoose.Schema({
     currencyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Currency', required: true },
     transactionId: { type: String, required: true },
     referenceId: { type: String },
+    transactionFee: { type: Number, required: true, default: 0 },
+    exchangeRate: { type: Number, required: true, default: 0 },
     transactionType: {
         type: String,
         enum: ['buy', 'sell', 'send', 'receive'],
@@ -33,10 +35,11 @@ const transactionsSchema = mongoose.Schema({
     paymentNumber: { type: String },
     receipientNumber: { type: String },
 
-    status: { type: String, enum: ['pending', 'success', 'cancelled', 'failed', 'deleted'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'success', 'cancelled', 'failed', 'deleted', 'processing'], default: 'pending' },
 
     action: { type: String },
     paymentProof: { type: String },
+    qrCode: { type: String },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

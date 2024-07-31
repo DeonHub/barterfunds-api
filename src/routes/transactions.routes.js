@@ -4,7 +4,7 @@ const router = express.Router();
 const checkAuth = require('../middleware/check-auth');
 
 const fileUpload = require('../utils/fileUpload');
-const upload = fileUpload("barterFunds/currencyLogos");
+const upload = fileUpload("barterFunds/transactionFiles");
 
 const { 
   getTransactions,
@@ -19,7 +19,7 @@ const {
 
 
 router.get("/", checkAuth, getTransactions);
-router.post("/",  checkAuth, createTransaction);
+router.post("/",  checkAuth, upload.single('qrCode'), createTransaction);
 router.get("/:transactionId", checkAuth, getTransactionById);
 router.patch("/:transactionId", checkAuth, upload.single('paymentProof'), updateTransaction);
 router.patch("/x/:referenceId", checkAuth, upload.single('paymentProof'), updateTransactionByReference);

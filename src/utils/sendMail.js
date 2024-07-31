@@ -561,7 +561,7 @@ const sendMail = (userEmail, token, subject, action, header1, header2, header3, 
                                       word-wrap: break-word;
                                     "
                                   >
-                                    <p style="font-size: 14px; line-height: 170%">This link will expire after 5 days.</p><br>
+                                    <p style="font-size: 14px; line-height: 170%">${ action!== 'login' ? `This link will expire after 5 days.` : ''}</p><br>
                                     <p style="font-size: 14px; line-height: 170%">${header3}</p><br>
                                     <p style="font-size: 14px; line-height: 170%">Thank you.</p>
                                   </div>

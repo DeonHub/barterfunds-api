@@ -6,7 +6,7 @@ const Referral = require("../models/referral");
 const Wallet = require("../models/wallet");
 const Currency = require("../models/currency");
 const path = require("path");
-
+const sendMail = require("../utils/sendMail");
 
 const getTransactions = (req, res, next) => {
   const filters = []; // Initialize an array to store all filters
@@ -39,12 +39,29 @@ const getTransactions = (req, res, next) => {
 };
 
 const createTransaction = (req, res, next) => {
+
+  let qrCode = '';
+
+  if (req.file) {
+    let filePath = req.file.path;
+    if (!filePath.startsWith('http')) {
+      filePath = path.relative(path.join(__dirname, '../..'), filePath);
+    }
+    qrCode = filePath;
+  }
+
+  // console.log(`qrCode: ${qrCode}`)
+
+
   const transaction = new Transactions({
     _id: new mongoose.Types.ObjectId(),
     userId: req.user.userId,
     currencyId: req.body.currencyId,
     transactionType: req.body.transactionType,
     transactionId: req.body.transactionId,
+    transactionFee: req.body.transactionFee || 0,
+    exchangeRate: req.body.exchangeRate || 0,
+    qrCode: qrCode || "",
     referenceId: req.body.referenceId || "",
     amountGhs: req.body.amountGhs,
     amountUsd: req.body.amountUsd,
@@ -255,118 +272,12 @@ const updateTransactionByReference = async (req, res, next) => {
   }
 };
 
-// const updateTransaction = async (req, res, next) => {
-//   const userId = req.user.userId;
-//   const id = req.params.transactionId;
-//   const { status } = req.body;
-//   const updateOps = {};
-//   const conversionRate = 15;
-
-//   // Check if there is a file attached to update the transaction proof
-//   if (req.file) {
-//     let filePath = req.file.path;
-//     if (!filePath.startsWith('http')) {
-//       filePath = path.relative(path.join(__dirname, '../..'), filePath);
-//     }
-//     updateOps.paymentProof = filePath;
-//     console.log(filePath);
-//   }
-
-//   // Iterate over the properties of req.body
-//   for (const propName in req.body) {
-//     if (Object.prototype.hasOwnProperty.call(req.body, propName)) {
-//       if (propName !== "status") {
-//         updateOps[propName] = req.body[propName];
-//       }
-//     }
-//   }
-
-//   // If status is provided, update it as well
-//   if (status) {
-//     updateOps.status = status;
-//   }
-
-//   // Update the updatedAt field to the current date and time
-//   updateOps.updatedAt = new Date();
-
-//   try {
-//     // Find and update the transaction by ID
-//     const result = await Transactions.updateOne({ _id: id }, { $set: updateOps }).exec();
-//     console.log("After reslut");
-
-//     // if (!result.nModified) {
-//     //   return res.status(404).json({
-//     //     success: false,
-//     //     message: 'Transaction not found or no changes made',
-//     //   });
-//     // }
-
-//     // Fetch the updated transaction
-//     const transaction = await Transactions.findById(id).exec();
-//     console.log("transaction found");
-//     if (!transaction) {
-//       return res.status(404).json({
-//         success: false,
-//         message: 'Transaction not found',
-//       });
-//     }
-
-//     console.log("before referal");
-//     // If the transaction amount is >= 1000 GHS and the status is success, credit the referrer's wallet
-//     if (transaction.amountGhs >= 1000 && updateOps.status === 'success') {
-//       console.log("Inside refereal");
-//       const referral = await Referral.findOne({ referee: transaction.userId._id }).exec();
-//       if (referral) {
-//         console.log("IReferal found");
-//         const referrerWallet = await Wallet.findOne({ userId: referral.referrer._id }).exec();
-//         if (referrerWallet) {
-//           const rewardGhs = 20;
-//           const rewardUsd = rewardGhs / conversionRate;
-
-//           referrerWallet.balanceGhs += rewardGhs;
-//           referrerWallet.balanceUsd += rewardUsd;
-
-//           await referrerWallet.save();
-
-//           // Create notification for the referrer
-//           const subject = "Referral Reward Credited";
-//           const message = `You have earned a referral reward of GHS 20.00 (USD ${rewardUsd.toFixed(2)}) for a successful transaction by your referee.`;
-//           createNotification(referral.referrer, subject, message);
-//         }
-//       }
-//       console.log("referral not found");
-//     }
-
-//     console.log("Creating notifiaction");
-//     // Create notification for user
-//     const subject = "Transaction Updated";
-//     const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
-//     createNotification(userId, subject, message);
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Transaction updated successfully",
-//       transaction: transaction,
-//       request: {
-//         type: "GET",
-//         url: `${baseUrl}/transactions/` + id,
-//       },
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({
-//       success: false,
-//       error: err,
-//     });
-//   }
-// };
-
 const updateTransaction = async (req, res, next) => {
   const userId = req.user.userId;
   const id = req.params.transactionId;
   const { status } = req.body;
   const updateOps = {};
-  const conversionRate = 15;
+  // const conversionRate = 15;
 
   // Check if there is a file attached to update the transaction proof
   if (req.file) {
@@ -420,16 +331,14 @@ const updateTransaction = async (req, res, next) => {
         const referrerWallet = await Wallet.findOne({ userId: referral.referrer._id }).exec();
         if (referrerWallet) {
           const rewardGhs = 20;
-          const rewardUsd = rewardGhs / conversionRate;
-
           referrerWallet.balanceGhs += rewardGhs;
-          referrerWallet.balanceUsd += rewardUsd;
+          referrerWallet.referralEarned += rewardGhs;
 
           await referrerWallet.save();
 
           // Create notification for the referrer
           const subject = "Referral Reward Credited";
-          const message = `You have earned a referral reward of GHS 20.00 (USD ${rewardUsd.toFixed(2)}) for a successful transaction by your referee.`;
+          const message = `You have earned a referral reward of GHS 20.00 for a successful transaction by your referee.`;
           createNotification(referral.referrer, subject, message);
         }
       }
@@ -454,6 +363,18 @@ const updateTransaction = async (req, res, next) => {
     const subject = "Transaction Updated";
     const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
     createNotification(userId, subject, message);
+
+    // Send the verification code to the user's email
+    sendMail(
+      transaction.userId.email,
+      '',
+      subject,
+      "login",
+      "Transaction Details Updated",
+      `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history on your dashboard.`,
+      "Login to your BarterFunds account to see more details",
+      "Login to your account"
+    );
 
     res.status(200).json({
       success: true,

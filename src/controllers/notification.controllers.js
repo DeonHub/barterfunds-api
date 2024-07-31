@@ -7,6 +7,7 @@ const getNotifications = (req, res, next) => {
 
   // Combine all filters into a single filter object using $and
   const filter = { $and: filters };
+  const index = 1;
 
   Notification.find(filter)
   .populate('userId')
@@ -16,6 +17,7 @@ const getNotifications = (req, res, next) => {
         success: true,
         count: notifications.length,
         notifications: notifications,
+        index: index
       });
     })
     .catch((err) => {
@@ -29,7 +31,8 @@ const getNotifications = (req, res, next) => {
 
 const getNotificationsByUser = (req, res, next) => {
     const userId = req.user.userId;
-
+    const index = 1;
+    
     Notification.find({ userId: userId })
         .sort({ createdAt: -1 })
         .populate('userId')
@@ -39,6 +42,7 @@ const getNotificationsByUser = (req, res, next) => {
                 success: true,
                 count: notifications.length,
                 notifications: notifications,
+                index: index
             });
         })
         .catch(err => {
