@@ -6,6 +6,7 @@ const orderSchema = mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     orderId: { type: String, required: true, unique: true },
     referenceId: { type: String },
+    quote: { type: String },
     action: { type: String, required: true },
     status: { type: String, enum: ['pending', 'success', 'cancelled', 'failed', 'deleted'], default: 'pending' },
     amountGhs: { type: Number, default: 0 },
