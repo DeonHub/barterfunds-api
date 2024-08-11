@@ -7,6 +7,7 @@ const Wallet = require("../models/wallet");
 const Currency = require("../models/currency");
 const path = require("path");
 const sendMail = require("../utils/sendMail");
+const Orders = require("../models/orders");
 
 const getTransactions = (req, res, next) => {
   const filters = []; // Initialize an array to store all filters
@@ -38,8 +39,23 @@ const getTransactions = (req, res, next) => {
     });
 };
 
-const createTransaction = (req, res, next) => {
+const generateOrderId = () => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let orderId = '';
+  for (let i = 0; i < 10; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    orderId += characters[randomIndex];
+  }
+  return orderId;
+}
 
+function capitalizeFirstLetter(str) {
+  if (str.length === 0) return str; // Return the empty string as is
+  
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const createTransaction = async (req, res, next) => {
   let qrCode = '';
 
   if (req.file) {
@@ -49,9 +65,6 @@ const createTransaction = (req, res, next) => {
     }
     qrCode = filePath;
   }
-
-  // console.log(`qrCode: ${qrCode}`)
-
 
   const transaction = new Transactions({
     _id: new mongoose.Types.ObjectId(),
@@ -77,28 +90,60 @@ const createTransaction = (req, res, next) => {
     transactionForm: req.body.transactionForm || ""
   });
 
-  transaction
-    .save()
-    .then((result) => {
-      // Create notification for user
-      const subject = "Transaction Created";
-      const message = `Your transaction with ID ${result.transactionId} has been created successfully. Please wait for an admin to verify your transaction.`;
-      createNotification(req.user.userId, subject, message);
+  try {
+    const result = await transaction.save();
 
-      res.status(201).json({
-        success: true,
-        message: "Transaction created successfully",
-        transaction: result
+    // Create notification for user
+    if (transaction.paymentMethod === 'wallet') {
+      const wallet = await Wallet.findOne({ userId: req.user.userId }).exec();
+      if (wallet) {
+        wallet.balanceGhs -= (transaction.amountGhs + transaction.transactionFee);
+        await wallet.save();
+      }
+
+      const currency = await Currency.findOne({ _id: transaction.currencyId }).exec();
+
+      const order = new Orders({
+        _id: new mongoose.Types.ObjectId(),
+        userId: req.user.userId,
+        walletId: wallet._id,
+        action: 'withdraw',
+        orderId: generateOrderId(),
+        amountGhs: transaction.amountGhs,
+        balanceGhs: wallet.balanceGhs,
+        paymentMethod: transaction.paymentMethod || "",
+        receipientMethod: transaction.receipientMethod || "",
+        receipientNumber: transaction.receipientNumber || "",
+        paymentNumber: transaction.paymentNumber || "",
+        quote: `${capitalizeFirstLetter(transaction.transactionType)} ${currency.currencyName}`,
+        status: 'success'
       });
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).json({
-        success: false,
-        message: "Error creating transaction",
-        error: err,
-      });
+
+      const result = await order.save();
+  
+      // Create a notification
+      const subject = "Order Created Successfully";
+      const message = `Your order with ID ${result.orderId} has been created successfully.`;
+      await createNotification(req.user.userId, subject, message);
+    }
+
+    const subject = "Transaction Created";
+    const message = `Your transaction with ID ${result.transactionId} has been created successfully. Please wait for an admin to verify your transaction.`;
+    await createNotification(req.user.userId, subject, message);
+
+    res.status(201).json({
+      success: true,
+      message: "Transaction created successfully",
+      transaction: result
     });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: "Error creating transaction",
+      error: err,
+    });
+  }
 };
 
 const getTransactionById = (req, res, next) => {
@@ -286,7 +331,6 @@ const updateTransaction = async (req, res, next) => {
       filePath = path.relative(path.join(__dirname, '../..'), filePath);
     }
     updateOps.paymentProof = filePath;
-    console.log(filePath);
   }
 
   // Iterate over the properties of req.body
@@ -345,6 +389,40 @@ const updateTransaction = async (req, res, next) => {
       console.log("referral not found");
     }
 
+
+    if(transaction.receipientMethod === 'wallet' && updateOps.status === 'success') {
+      const wallet = await Wallet.findOne({ userId: transaction.userId }).exec();
+      if (wallet) {
+        wallet.balanceGhs += transaction.amountGhs;
+        await wallet.save();
+      }
+
+      const currency = await Currency.findById(transaction.currencyId._id).exec();
+
+      const order = new Orders({
+        _id: new mongoose.Types.ObjectId(),
+        userId: transaction.userId,
+        walletId: wallet._id,
+        action: 'deposit',
+        orderId: generateOrderId(),
+        amountGhs: transaction.amountGhs,
+        balanceGhs: wallet.balanceGhs,
+        paymentMethod: transaction.paymentMethod || "",
+        receipientMethod: transaction.receipientMethod || "",
+        receipientNumber: transaction.receipientNumber || "",
+        paymentNumber: transaction.paymentNumber || "",
+        quote: `${capitalizeFirstLetter(transaction.transactionType)} ${currency.currencyName}`,
+        status: 'success'
+      });
+      
+      const result = await order.save();
+
+      // Create a notification
+      const subject = "Order Created Successfully";
+      const message = `Your order with ID ${result.orderId} has been created successfully.`;
+      await createNotification(transaction.userId._id, subject, message);
+    }
+
     // Update the currency reserve amount if the transaction is successful
     if (updateOps.status === 'success') {
       const currency = await Currency.findById(transaction.currencyId._id).exec();
@@ -362,7 +440,7 @@ const updateTransaction = async (req, res, next) => {
     // Create notification for user
     const subject = "Transaction Updated";
     const message = `Your transaction with ID ${transaction.transactionId} has been updated. Please check your transaction history for more details.`;
-    createNotification(userId, subject, message);
+    createNotification(transaction.userId._id, subject, message);
 
     // Send the verification code to the user's email
     sendMail(
