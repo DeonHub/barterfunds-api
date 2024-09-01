@@ -20,7 +20,9 @@ const notificationRoutes = require('./src/routes/notification.routes');
 
 const dbUser = process.env.DB_USER;
 const dbPassword = process.env.DB_PASSWORD;
-const uri = `mongodb+srv://${dbUser}:${dbPassword}@deonhub.g1umm8e.mongodb.net/?retryWrites=true&w=majority`
+// const uri = `mongodb+srv://${dbUser}:${dbPassword}@deonhub.g1umm8e.mongodb.net/?retryWrites=true&w=majority`
+const uri = `mongodb+srv://${dbUser}:${dbPassword}@barterfunds.sykg3.mongodb.net/?retryWrites=true&w=majority`
+
 
 const transporter = require("./src/utils/transporter");
 const hostEmail = process.env.HOST_EMAIL;
