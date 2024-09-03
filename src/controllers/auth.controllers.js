@@ -39,8 +39,9 @@ function generateQRCodeURL(authSecretKey, issuer, label, iconURL) {
 }
 
 const generateUsername = (name) => {
+  const trimmedName = name.trim();
   const randomNumbers = Math.floor(100000 + Math.random() * 900000);
-  return name + randomNumbers;
+  return trimmedName + randomNumbers;
 };
 
 const generateToken = (user) => {
