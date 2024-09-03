@@ -18,10 +18,20 @@ const transactionRoutes = require('./src/routes/transactions.routes');
 const referralsRoutes = require('./src/routes/referrals.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 
-const dbUser = process.env.DB_USER;
-const dbPassword = process.env.DB_PASSWORD;
-// const uri = `mongodb+srv://${dbUser}:${dbPassword}@deonhub.g1umm8e.mongodb.net/?retryWrites=true&w=majority`
-const uri = `mongodb+srv://${dbUser}:${dbPassword}@barterfunds.sykg3.mongodb.net/?retryWrites=true&w=majority`
+const mode = process.env.MODE;
+let dbUser, dbPassword, uri;
+
+if(mode === 'dev'){
+  dbUser = process.env.DB_USER_DEV;
+  dbPassword = process.env.DB_PASSWORD_DEV;
+  uri = `mongodb+srv://${dbUser}:${dbPassword}@deonhub.g1umm8e.mongodb.net/?retryWrites=true&w=majority`
+} else {
+  dbUser = process.env.DB_USER_PROD;
+  dbPassword = process.env.DB_PASSWORD_PROD;
+  uri = `mongodb+srv://${dbUser}:${dbPassword}@barterfunds.sykg3.mongodb.net/?retryWrites=true&w=majority`
+}
+
+
 
 
 const transporter = require("./src/utils/transporter");
