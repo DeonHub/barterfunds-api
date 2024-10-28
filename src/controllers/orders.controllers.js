@@ -284,7 +284,7 @@ const updateOrderByReference = async (req, res, next) => {
 const updateOrder = async (req, res, next) => {
   const userId = req.user.userId;
   const id = req.params.orderId;
-  const status = req.body.status || null;
+  const { status } = req.body;
   const updateOps = {};
 
   // Check if there is a file attached to update the order proof
@@ -324,34 +324,37 @@ const updateOrder = async (req, res, next) => {
     }
 
     // Check the order action and handle wallet balance updates for withdrawals
-    const wallet = await Wallet.findById(order.walletId).exec();
+    if(updateOps.status === 'success'){
+      const wallet = await Wallet.findById(order.walletId).exec();
 
-    if (!wallet) {
-      return res.status(404).json({
-        success: false,
-        message: 'Associated wallet not found',
-      });
-    }
-
-    if (order.action === 'withdraw') {
-    // Deduct wallet balances
-    wallet.balanceGhs -= order.amountGhs;
-    wallet.balanceUsd -= order.amountUsd;
-    } else {
-      // Add wallet balances
-      wallet.balanceGhs += order.amountGhs;
-      wallet.balanceUsd += order.amountUsd;
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          message: 'Associated wallet not found',
+        });
       }
-
-    // Save the updated wallet
-    await wallet.save();
-
-    // Update the order balances and set walletCredited and confirmedPayment to true
-    updateOps.balanceGhs = Number(wallet.balanceGhs);
-    updateOps.balanceUsd = Number(wallet.balanceUsd || 0);
-    updateOps.confirmedPayment = true;
-    updateOps.status = 'success';
- 
+  
+      if (order.action === 'withdraw') {
+      // Deduct wallet balances
+      wallet.balanceGhs -= order.amountGhs;
+      wallet.balanceUsd -= order.amountUsd;
+      } else {
+        // Add wallet balances
+        wallet.balanceGhs += order.amountGhs;
+        wallet.balanceUsd += order.amountUsd;
+        }
+  
+      // Save the updated wallet
+      await wallet.save();
+  
+      // Update the order balances and set walletCredited and confirmedPayment to true
+      updateOps.balanceGhs = Number(wallet.balanceGhs);
+      updateOps.balanceUsd = Number(wallet.balanceUsd || 0);
+      updateOps.confirmedPayment = true;
+      updateOps.status = status;
+   
+    }
+   
 
     // Update the updatedAt field to the current date and time
     updateOps.updatedAt = new Date();

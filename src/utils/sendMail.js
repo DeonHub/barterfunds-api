@@ -8,7 +8,7 @@ const currentYear = new Date().getFullYear();
 const sendMail = (userEmail, token, subject, action, header1, header2, header3, buttonText) => {
   // Define email options
   const mailOptions = {
-    from: hostEmail,
+    from: '"Barter Funds" <noreply@barter-funds.com>',
     to: userEmail,
     subject: subject,
     html: `
