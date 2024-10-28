@@ -1,0 +1,6 @@
+name = "barterfunds-api-worker"
+type = "javascript"
+
+[env.production]
+workers_dev = true
+compatibility_date = "2024-09-18"
