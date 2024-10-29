@@ -396,12 +396,12 @@ const sendMail = (userEmail, token, subject, action, header1, header2, header3, 
                                       <span
                                         style="
                                           font-size: 20px;
-                                          line-height: 34px;
+                                         
                                         "
                                         ><strong
                                           ><span
                                             style="
-                                              line-height: 34px;
+                                              
                                               font-size: 20px;
                                             "
                                             >${header1},</span
@@ -431,7 +431,7 @@ const sendMail = (userEmail, token, subject, action, header1, header2, header3, 
                                   style="
                                     overflow-wrap: break-word;
                                     word-break: break-word;
-                                    padding: 10px 100px 20px;
+                                    padding: 10px 50px 20px;
                                     font-family: 'Open Sans', sans-serif;
                                   "
                                   align="left"
@@ -563,7 +563,8 @@ const sendMail = (userEmail, token, subject, action, header1, header2, header3, 
                                   >
                                     <p style="font-size: 14px; line-height: 170%">${ action!== 'login' ? `This link will expire after 5 days.` : ''}</p><br>
                                     <p style="font-size: 14px; line-height: 170%">${header3}</p><br>
-                                    <p style="font-size: 14px; line-height: 170%">Thank you.</p>
+                                    <p style="font-size: 14px; line-height: 170%">Thank you for using Barter Funds!</p><br>
+                                    <p style="font-size: 14px; line-height: 170%">Best regards,<br> The Barter Funds Team</p>
                                   </div>
                                 </td>
                               </tr>

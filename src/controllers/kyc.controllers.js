@@ -5,9 +5,14 @@ const Users = require("../models/users");
 const createNotification = require("../utils/createNotification");
 const path = require("path");
 
+const sendMail = require("../utils/sendMail");
+
+
 
 // Function to add KYC details
 const addKYC = async (req, res, next) => {
+  const user = await Users.findOne({ email: req.user.email });
+
     try {
       const userId = req.user.userId;
   
@@ -52,6 +57,21 @@ const addKYC = async (req, res, next) => {
   
       // Create the notification
       const notification = await createNotification(userId, subject, message);
+
+       // Send email for order creation
+    sendMail(
+      user.email,
+      '',
+      `KYC Documentation Submitted for Review`,
+      "login",
+      `Hi ${user.firstname}`,
+      `
+    <p>Thank you for submitting your KYC documentation. Our team is currently reviewing your submission to verify your identity. As a reminder, we review every submission account manually, which may take up to 24 hours.</p><br>
+    <p>We will notify you as soon as your KYC verification status is updated. If you have any questions in the meantime, feel free to reach out to our support team.</p>
+    `,
+      ``,
+      "Visit Dashboard"
+    );
 
       res.status(201).json({
           success: true,
@@ -162,7 +182,8 @@ const getKYCById = (req, res, next) => {
   };
   
 
-const updateKyc = (req, res, next) => {
+const updateKyc = async (req, res, next) => {
+  const user = await Users.findOne({ email: req.user.email });
     const id = req.params.kycId;
     const { status } = req.body;
     const updateOps = {};
@@ -196,6 +217,20 @@ const updateKyc = (req, res, next) => {
                   
                   const notification = await createNotification(kyc.userId, subject, message);
                   console.log('Notification created:', notification);
+
+                  sendMail(
+                    user.email,
+                    '',
+                    `KYC Verification Approved`,
+                    "login",
+                    `Hi ${user.firstname}`,
+                    `
+                  <p>Great news! Your KYC verification has been successfully approved. You now have full access to all Barter Funds services.</p><br>
+                  <p>You’re now ready to buy, sell, send, and receive digital assets easily and securely. Log in to get started. If you have any questions, feel free to reach out to our support team.</p>
+                  `,
+                    ``,
+                    "Visit Dashboard"
+                  );
   
                   res.status(200).json({
                     success: true,
@@ -223,6 +258,20 @@ const updateKyc = (req, res, next) => {
               const notification = createNotification(kyc.userId, subject, message);
               console.log('Notification created:', notification);
 
+              sendMail(
+                user.email,
+                '',
+                `KYC Verification Rejected`,
+                "login",
+                `Hi ${user.firstname}`,
+                `
+              <p>Unfortunately, your KYC verification has been rejected. Please review your submission and ensure all the details are correct. </p><br>
+              <p>You can re-submit your documents through your account dashboard. If you need further assistance, contact our support team.</p>
+              `,
+                ``,
+                "Visit Dashboard"
+              );
+
               res.status(200).json({
                 success: true,
                 message: "KYC status updated successfully",
@@ -234,32 +283,7 @@ const updateKyc = (req, res, next) => {
                 },
               });
 
-              // Users.updateOne({ _id: kyc.userId })
-              //   .exec()
-              //   .then(async () => {
-              //     const subject = "KYC Rejected";
-              //     const message = "Your KYC has been rejected. Please check your details and submit again.";
-                  
-              //     const notification = await createNotification(kyc.userId, subject, message);
-              //     console.log('Notification created:', notification);
-  
-              //     res.status(200).json({
-              //       success: true,
-              //       message: "KYC status updated successfully",
-              //       kyc: kyc,
-              //       notification: notification,
-              //       request: {
-              //         type: "GET",
-              //         url: `${baseUrl}/kycs/` + id,
-              //       },
-              //     });
-              //   })
-                // .catch((err) => {
-                //   res.status(500).json({
-                //     success: false,
-                //     error: err,
-                //   });
-                // });
+              
             } 
             // Handle other status updates
             else {

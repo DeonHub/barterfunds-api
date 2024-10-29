@@ -4,6 +4,28 @@ const Wallet = require("../models/wallet");
 const baseUrl = process.env.BASE_URL;
 const path = require("path");
 const createNotification = require("../utils/createNotification");
+const sendMail = require("../utils/sendMail");
+const Users = require("../models/users");
+
+
+const formatDate = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  const options = { year: "numeric", month: "long", day: "numeric" };
+  return date.toLocaleDateString("en-US", options);
+};
+
+const formatCurrency = (value) => {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "Invalid number";
+  }
+
+  return number.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 const getOrders = async (req, res, next) => {
   const filters = [];
@@ -51,6 +73,9 @@ const getOrders = async (req, res, next) => {
 };
 
 const createOrder = async (req, res, next) => {
+  const user = await Users.findOne({ email: req.user.email });
+
+
   const order = new Orders({
     _id: new mongoose.Types.ObjectId(),
     userId: req.user.userId,
@@ -73,6 +98,29 @@ const createOrder = async (req, res, next) => {
     const subject = "Order Created Successfully";
     const message = `Your order with ID ${result.orderId} has been created successfully.`;
     const notification = await createNotification(req.user.userId, subject, message);
+
+    // Send email for order creation
+    sendMail(
+      user.email,
+      '',
+      `Your ${result.action === 'deposit' ? 'Deposit' : 'Withdrawal Request'} Has Been Created`,
+      "login",
+      `Hi ${user.firstname}`,
+      `
+    <p>Your ${result.action === 'deposit' ? 'deposit' : 'withdrawal'} request has been successfully created and is now pending confirmation.</p><br>
+    
+    <p><strong>${result.action === 'deposit' ? 'Deposit' : 'Withdrawal'} ID:</strong> ${result.orderId}<br>
+    <strong>Date Created:</strong> ${formatDate(result.createdAt)}<br>
+    <strong>Amount:</strong> ${formatCurrency(result.amountGhs)} GHS</p>
+    <br>
+    <p>All payments are manually reviewed and processed. This process typically takes between 2 and 60 minutes but may extend on certain occasions. 
+  Please be patient while your payment is being reviewed.</p>
+  <br>
+  <p>Once your deposit is confirmed, the funds will be available in your Barter Funds wallet. If you have any questions, feel free to reach out to our support team.</p>
+    `,
+      ``,
+      "Visit Dashboard"
+    );
 
     res.status(201).json({
       success: true,
@@ -282,6 +330,7 @@ const updateOrderByReference = async (req, res, next) => {
 
 
 const updateOrder = async (req, res, next) => {
+  const user = await Users.findOne({ email: req.user.email });
   const userId = req.user.userId;
   const id = req.params.orderId;
   const { status } = req.body;
@@ -353,6 +402,27 @@ const updateOrder = async (req, res, next) => {
       updateOps.confirmedPayment = true;
       updateOps.status = status;
    
+
+      // Send email for order creation
+    sendMail(
+      user.email,
+      '',
+      `${order.action === 'deposit' ? 'Deposit' : 'Withdrawal Request'} Successful on Barter Funds`,
+      "login",
+      `Hi ${user.firstname}`,
+      `
+    <p>${order.action === 'deposit' ? `We’ve received your deposit of ${formatCurrency(order.amountGhs)} GHS on Barter Funds. Your funds are now available in your wallet.` : `Your withdrawal request of ${formatCurrency(order.amountGhs)} GHS has been successfully processed. The funds will be sent to your designated account shortly.`}</p><br>
+    
+    <p><strong>${order.action === 'deposit' ? 'Deposit' : 'Withdrawal'} ID:</strong> ${order.orderId}<br>
+    <strong>Date Created:</strong> ${formatDate(order.createdAt)}<br>
+    <br>
+    <p>If you have any questions, feel free to contact support.</p>
+    `,
+      ``,
+      "Visit Dashboard"
+    );
+
+
     }
    
 

@@ -14,7 +14,6 @@ const sendMail = require("../utils/sendMail");
 const { generateWalletAddress } = require("../controllers/wallet.controllers");
 const createNotification = require("../utils/createNotification");
 
-
 const crypto = require("crypto");
 
 // Function to generate a QR code URL for Google Authenticator
@@ -95,19 +94,18 @@ const getUserFromToken = async (req, res, next) => {
 };
 
 const generateReferralCode = () => {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const codeLength = 8;
-  let referralCode = '';
+  let referralCode = "";
 
   for (let i = 0; i < codeLength; i++) {
-      const randomIndex = Math.floor(Math.random() * characters.length);
-      referralCode += characters[randomIndex];
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    referralCode += characters[randomIndex];
   }
 
   return referralCode;
-}
-
-
+};
 
 const Login = async (req, res, next) => {
   try {
@@ -118,7 +116,6 @@ const Login = async (req, res, next) => {
         .status(401)
         .json({ success: false, message: "Invalid username or password" });
     }
-
 
     const result = await bcrypt.compare(req.body.password, user.password);
 
@@ -133,7 +130,10 @@ const Login = async (req, res, next) => {
     await user.save();
 
     const token = generateToken(user);
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
     res
       .status(200)
       .json({ success: true, message: "Login successful", token, user });
@@ -142,9 +142,6 @@ const Login = async (req, res, next) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-
-
-
 
 const Signup = async (req, res, next) => {
   try {
@@ -191,7 +188,7 @@ const Signup = async (req, res, next) => {
       activationToken: activationToken,
       activationTokenExpires: Date.now() + 432000000,
       referralCode: generateReferralCode(),
-      referrerCode: req.body.ref || ''
+      referrerCode: req.body.ref || "",
     });
 
     const result = await user.save();
@@ -204,7 +201,7 @@ const Signup = async (req, res, next) => {
           referrer: referrer._id,
           referee: user._id,
           referralCode: req.body.ref,
-          status: 'pending'
+          status: "pending",
         });
         await referral.save();
 
@@ -212,6 +209,24 @@ const Signup = async (req, res, next) => {
         const subject = "Referral Signup Notification";
         const message = `${user.firstname} ${user.surname} has signed up using your referral code.`;
         await createNotification(referrer._id, subject, message);
+
+        // Send email for order creation
+        sendMail(
+          user.email,
+          "",
+          `Your ${
+            result.action === "deposit" ? "Deposit" : "Withdrawal Request"
+          } Has Been Created`,
+          "login",
+          `Hi ${user.firstname}`,
+          `
+    <p>Great news! Someone you referred just signed up on Barter Funds.</p><br>
+
+    <p>Remember, you’ll receive 20.00 GHS when they make a transaction of 1000.00 GHS or more.</p>
+    `,
+          ``,
+          "Visit Dashboard"
+        );
       }
     }
 
@@ -242,9 +257,9 @@ const Signup = async (req, res, next) => {
   }
 };
 
-
 const accountActivation = async (req, res, next) => {
   const { activationToken } = req.body;
+  console.log(activationToken);
 
   if (!activationToken) {
     return res
@@ -280,7 +295,8 @@ const accountActivation = async (req, res, next) => {
 
       // Subject and message for the notification
       const subject = "Account Activated Successfully";
-      const message = "Your account has been successfully activated. Welcome to our service!";
+      const message =
+        "Your account has been successfully activated. Welcome to our service!";
 
       // Create the notification
       const notification = await createNotification(user._id, subject, message);
@@ -296,15 +312,20 @@ const accountActivation = async (req, res, next) => {
 
       // Subject and message for the notification
       const subjectx = "BarterFunds Wallet Activated Successfully";
-      const messagex = "Your BarterFunds Wallet has been successfully activated. You can now make transactions with your wallet";
+      const messagex =
+        "Your BarterFunds Wallet has been successfully activated. You can now make transactions with your wallet";
 
       // Create the notification
-      const notificationx = await createNotification(user._id, subjectx, messagex);
+      const notificationx = await createNotification(
+        user._id,
+        subjectx,
+        messagex
+      );
 
       res.status(200).json({
         success: true,
         message: "User account activation successful",
-        user: user
+        user: user,
       });
     } else {
       res.status(200).json({
@@ -319,9 +340,6 @@ const accountActivation = async (req, res, next) => {
   }
 };
 
-
-
-
 const forgotPassword = (req, res, next) => {
   const email = req.body.email;
   const resetToken = crypto.randomBytes(64).toString("base64");
@@ -333,7 +351,9 @@ const forgotPassword = (req, res, next) => {
       // If user not found, return error
       if (!user) {
         console.log("User not found");
-        return res.status(201).json({ success: false, message: "User not found" });
+        return res
+          .status(201)
+          .json({ success: false, message: "User not found" });
       }
 
       // Debugging: Log user details
@@ -357,15 +377,21 @@ const forgotPassword = (req, res, next) => {
       );
 
       // Send success response
-      res.status(201).json({ success: true, message: "Reset Password email sent successfully." });
+      res
+        .status(201)
+        .json({
+          success: true,
+          message: "Reset Password email sent successfully.",
+        });
     })
     .catch((err) => {
       // Error handling: Log and return internal server error
       console.error("Error finding user:", err);
-      res.status(500).json({ success: false, message: "Internal server error" });
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     });
 };
-
 
 const resetPassword = async (req, res, next) => {
   const { password, resetToken } = req.body;
@@ -378,12 +404,19 @@ const resetPassword = async (req, res, next) => {
 
   try {
     // Find user by token
-    const user = await Users.findOne({ resetToken: resetToken, resetTokenExpires: { $gt: Date.now() } });
+    const user = await Users.findOne({
+      resetToken: resetToken,
+      resetTokenExpires: { $gt: Date.now() },
+    });
 
     if (!user) {
       return res
         .status(404)
-        .json({ success: false, message: "Invalid or expired reset token. Please request for another password reset link." });
+        .json({
+          success: false,
+          message:
+            "Invalid or expired reset token. Please request for another password reset link.",
+        });
     }
 
     // Hash the new password
@@ -400,7 +433,8 @@ const resetPassword = async (req, res, next) => {
 
     // Subject and message for the notification
     const subject = "Password Reset Successfully";
-    const message = "Your password has been successfully reset. If you did not perform this action, please contact support immediately.";
+    const message =
+      "Your password has been successfully reset. If you did not perform this action, please contact support immediately.";
 
     // Create the notification
     const notification = await createNotification(user._id, subject, message);
@@ -409,16 +443,13 @@ const resetPassword = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Password reset successful",
-      notification: notification
+      notification: notification,
     });
   } catch (err) {
     console.error("Error resetting password:", err);
-    res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-
 
 const updatePassword = async (req, res, next) => {
   try {
@@ -441,15 +472,24 @@ const updatePassword = async (req, res, next) => {
     await user.save();
 
     const subject = "Password Updated Successfully";
-    const message = "Your password has been successfully updated. If you did not perform this action, please contact support immediately.";
+    const message =
+      "Your password has been successfully updated. If you did not perform this action, please contact support immediately.";
 
     const notification = await createNotification(userId, subject, message);
 
     // Optionally, you can send a success message
-    return res.status(200).json({success: true, message: "Password updated successfully", notification: notification });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Password updated successfully",
+        notification: notification,
+      });
   } catch (error) {
     console.error("Error updating password:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -476,7 +516,6 @@ const twoFactorAuth = async (req, res, next) => {
       // Generate a secret key for two-factor authentication
       const authSecretKey = speakeasy.generateSecret({ length: 20 });
 
-
       // Generate a QR code URL for Google Authenticator
       const qrCodeURL = await generateQRCodeURL(
         authSecretKey,
@@ -484,7 +523,7 @@ const twoFactorAuth = async (req, res, next) => {
         label,
         iconURL
       );
-      
+
       // Update the user document with the secret key and QR code URL
       // user.twoFactorAuth = true;
       !user.twoFactorAuthSecretKey
@@ -494,42 +533,33 @@ const twoFactorAuth = async (req, res, next) => {
         ? (user.twoFactorAuthQrcode = qrCodeURL)
         : user.twoFactorAuthQrcode;
 
-        
-
       // Save the updated user document
       await user
         .save()
         .then(() => {
-          
-          res
-            .status(200)
-            .json({
-              success: true,
-              message: "QR Code generated successfully",
-              user: user,
-              token: token
-            });
+          res.status(200).json({
+            success: true,
+            message: "QR Code generated successfully",
+            user: user,
+            token: token,
+          });
         })
         .catch((err) => {
           console.error("User already authenticated:", err);
-          res
-            .status(500)
-            .json({
-              success: false,
-              message: "Two Factor Auth already enabled",
-              user: user,
-            });
+          res.status(500).json({
+            success: false,
+            message: "Two Factor Auth already enabled",
+            user: user,
+          });
         });
     } else {
       // If two-factor authentication is already enabled, return nothing
-      console.log('user has twofactor')
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Two Factor Auth already enabled",
-          user: user,
-        });
+      console.log("user has twofactor");
+      return res.status(200).json({
+        success: true,
+        message: "Two Factor Auth already enabled",
+        user: user,
+      });
     }
   } catch (err) {
     console.error("Error in twofactorauth:", err);
@@ -558,19 +588,15 @@ const verifyTwoFactorAuth = async (req, res, next) => {
     });
 
     if (verified) {
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Two-factor authentication successful",
-        });
+      return res.status(200).json({
+        success: true,
+        message: "Two-factor authentication successful",
+      });
     } else {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Could not verify Two Factor Authentication code.",
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Could not verify Two Factor Authentication code.",
+      });
     }
   } catch (err) {
     console.error("Error verifying two-factor authentication:", err);
@@ -595,7 +621,7 @@ const getCurrentUser = async (req, res, next) => {
     console.error("Error fetching user:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
 module.exports = {
   Login,
@@ -607,5 +633,5 @@ module.exports = {
   getUserFromToken,
   twoFactorAuth,
   verifyTwoFactorAuth,
-  getCurrentUser
+  getCurrentUser,
 };
