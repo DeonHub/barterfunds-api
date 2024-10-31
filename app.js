@@ -17,6 +17,7 @@ const ticketRoutes = require('./src/routes/supportTicket.routes');
 const transactionRoutes = require('./src/routes/transactions.routes');
 const referralsRoutes = require('./src/routes/referrals.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
+const mailsRoutes = require('./src/routes/mails.routes');
 
 const mode = process.env.MODE;
 let dbUser, dbPassword, uri;
@@ -82,6 +83,7 @@ app.use("/dashboard", dashboardRoutes);
 app.use("/transactions", transactionRoutes);
 app.use("/referrals", referralsRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/mails", mailsRoutes);
 
 
 app.use((req, res, next) => {
