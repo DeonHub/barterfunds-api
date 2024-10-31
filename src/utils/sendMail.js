@@ -4,8 +4,16 @@ const hostEmail = process.env.EMAIL_HOST_USER;
 const baseUrl = process.env.BASE_URL;
 const currentYear = new Date().getFullYear();
 
-
-const sendMail = (userEmail, token, subject, action, header1, header2, header3, buttonText) => {
+const sendMail = (
+  userEmail,
+  token,
+  subject,
+  action,
+  header1,
+  header2,
+  header3,
+  buttonText
+) => {
   // Define email options
   const mailOptions = {
     from: '"Barter Funds" <noreply@barter-funds.com>',
@@ -561,7 +569,11 @@ const sendMail = (userEmail, token, subject, action, header1, header2, header3, 
                                       word-wrap: break-word;
                                     "
                                   >
-                                    <p style="font-size: 14px; line-height: 170%">${ action!== 'login' ? `This link will expire after 5 days.` : ''}</p><br>
+                                    <p style="font-size: 14px; line-height: 170%">${
+                                      action !== "login"
+                                        ? `This link will expire after 5 days.`
+                                        : ""
+                                    }</p><br>
                                     <p style="font-size: 14px; line-height: 170%">${header3}</p><br>
                                     <p style="font-size: 14px; line-height: 170%">Thank you for using Barter Funds!</p><br>
                                     <p style="font-size: 14px; line-height: 170%">Best regards,<br> The Barter Funds Team</p>
